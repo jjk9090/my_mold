@@ -123,59 +123,59 @@ mymold/fast:
 	$(MAKE) -f CMakeFiles/mymold.dir/build.make CMakeFiles/mymold.dir/build
 .PHONY : mymold/fast
 
-input-sections.o: input-sections.c.o
+input_file.o: input_file.c.o
 
-.PHONY : input-sections.o
-
-# target to build an object file
-input-sections.c.o:
-	$(MAKE) -f CMakeFiles/mymold.dir/build.make CMakeFiles/mymold.dir/input-sections.c.o
-.PHONY : input-sections.c.o
-
-input-sections.i: input-sections.c.i
-
-.PHONY : input-sections.i
-
-# target to preprocess a source file
-input-sections.c.i:
-	$(MAKE) -f CMakeFiles/mymold.dir/build.make CMakeFiles/mymold.dir/input-sections.c.i
-.PHONY : input-sections.c.i
-
-input-sections.s: input-sections.c.s
-
-.PHONY : input-sections.s
-
-# target to generate assembly for a file
-input-sections.c.s:
-	$(MAKE) -f CMakeFiles/mymold.dir/build.make CMakeFiles/mymold.dir/input-sections.c.s
-.PHONY : input-sections.c.s
-
-inputefile.o: inputefile.c.o
-
-.PHONY : inputefile.o
+.PHONY : input_file.o
 
 # target to build an object file
-inputefile.c.o:
-	$(MAKE) -f CMakeFiles/mymold.dir/build.make CMakeFiles/mymold.dir/inputefile.c.o
-.PHONY : inputefile.c.o
+input_file.c.o:
+	$(MAKE) -f CMakeFiles/mymold.dir/build.make CMakeFiles/mymold.dir/input_file.c.o
+.PHONY : input_file.c.o
 
-inputefile.i: inputefile.c.i
+input_file.i: input_file.c.i
 
-.PHONY : inputefile.i
+.PHONY : input_file.i
 
 # target to preprocess a source file
-inputefile.c.i:
-	$(MAKE) -f CMakeFiles/mymold.dir/build.make CMakeFiles/mymold.dir/inputefile.c.i
-.PHONY : inputefile.c.i
+input_file.c.i:
+	$(MAKE) -f CMakeFiles/mymold.dir/build.make CMakeFiles/mymold.dir/input_file.c.i
+.PHONY : input_file.c.i
 
-inputefile.s: inputefile.c.s
+input_file.s: input_file.c.s
 
-.PHONY : inputefile.s
+.PHONY : input_file.s
 
 # target to generate assembly for a file
-inputefile.c.s:
-	$(MAKE) -f CMakeFiles/mymold.dir/build.make CMakeFiles/mymold.dir/inputefile.c.s
-.PHONY : inputefile.c.s
+input_file.c.s:
+	$(MAKE) -f CMakeFiles/mymold.dir/build.make CMakeFiles/mymold.dir/input_file.c.s
+.PHONY : input_file.c.s
+
+input_sections.o: input_sections.c.o
+
+.PHONY : input_sections.o
+
+# target to build an object file
+input_sections.c.o:
+	$(MAKE) -f CMakeFiles/mymold.dir/build.make CMakeFiles/mymold.dir/input_sections.c.o
+.PHONY : input_sections.c.o
+
+input_sections.i: input_sections.c.i
+
+.PHONY : input_sections.i
+
+# target to preprocess a source file
+input_sections.c.i:
+	$(MAKE) -f CMakeFiles/mymold.dir/build.make CMakeFiles/mymold.dir/input_sections.c.i
+.PHONY : input_sections.c.i
+
+input_sections.s: input_sections.c.s
+
+.PHONY : input_sections.s
+
+# target to generate assembly for a file
+input_sections.c.s:
+	$(MAKE) -f CMakeFiles/mymold.dir/build.make CMakeFiles/mymold.dir/input_sections.c.s
+.PHONY : input_sections.c.s
 
 main.o: main.c.o
 
@@ -204,32 +204,32 @@ main.c.s:
 	$(MAKE) -f CMakeFiles/mymold.dir/build.make CMakeFiles/mymold.dir/main.c.s
 .PHONY : main.c.s
 
-output-chunks.o: output-chunks.c.o
+output_chunks.o: output_chunks.c.o
 
-.PHONY : output-chunks.o
+.PHONY : output_chunks.o
 
 # target to build an object file
-output-chunks.c.o:
-	$(MAKE) -f CMakeFiles/mymold.dir/build.make CMakeFiles/mymold.dir/output-chunks.c.o
-.PHONY : output-chunks.c.o
+output_chunks.c.o:
+	$(MAKE) -f CMakeFiles/mymold.dir/build.make CMakeFiles/mymold.dir/output_chunks.c.o
+.PHONY : output_chunks.c.o
 
-output-chunks.i: output-chunks.c.i
+output_chunks.i: output_chunks.c.i
 
-.PHONY : output-chunks.i
+.PHONY : output_chunks.i
 
 # target to preprocess a source file
-output-chunks.c.i:
-	$(MAKE) -f CMakeFiles/mymold.dir/build.make CMakeFiles/mymold.dir/output-chunks.c.i
-.PHONY : output-chunks.c.i
+output_chunks.c.i:
+	$(MAKE) -f CMakeFiles/mymold.dir/build.make CMakeFiles/mymold.dir/output_chunks.c.i
+.PHONY : output_chunks.c.i
 
-output-chunks.s: output-chunks.c.s
+output_chunks.s: output_chunks.c.s
 
-.PHONY : output-chunks.s
+.PHONY : output_chunks.s
 
 # target to generate assembly for a file
-output-chunks.c.s:
-	$(MAKE) -f CMakeFiles/mymold.dir/build.make CMakeFiles/mymold.dir/output-chunks.c.s
-.PHONY : output-chunks.c.s
+output_chunks.c.s:
+	$(MAKE) -f CMakeFiles/mymold.dir/build.make CMakeFiles/mymold.dir/output_chunks.c.s
+.PHONY : output_chunks.c.s
 
 passes.o: passes.c.o
 
@@ -294,18 +294,18 @@ help:
 	@echo "... rebuild_cache"
 	@echo "... edit_cache"
 	@echo "... mymold"
-	@echo "... input-sections.o"
-	@echo "... input-sections.i"
-	@echo "... input-sections.s"
-	@echo "... inputefile.o"
-	@echo "... inputefile.i"
-	@echo "... inputefile.s"
+	@echo "... input_file.o"
+	@echo "... input_file.i"
+	@echo "... input_file.s"
+	@echo "... input_sections.o"
+	@echo "... input_sections.i"
+	@echo "... input_sections.s"
 	@echo "... main.o"
 	@echo "... main.i"
 	@echo "... main.s"
-	@echo "... output-chunks.o"
-	@echo "... output-chunks.i"
-	@echo "... output-chunks.s"
+	@echo "... output_chunks.o"
+	@echo "... output_chunks.i"
+	@echo "... output_chunks.s"
 	@echo "... passes.o"
 	@echo "... passes.i"
 	@echo "... passes.s"

@@ -6,24 +6,6 @@
 
 #IncludeRegexTransform: 
 
-/home/jjk/project/mold2/my_mold/ELFSymbol.h
-mold.h
-/home/jjk/project/mold2/my_mold/mold.h
-
-/home/jjk/project/mold2/my_mold/MappedFile.h
-mold.h
-/home/jjk/project/mold2/my_mold/mold.h
-sys/stat.h
--
-fcntl.h
--
-unistd.h
--
-errno.h
--
-sys/mman.h
--
-
 /home/jjk/project/mold2/my_mold/bigvector.h
 stdlib.h
 -
@@ -42,6 +24,10 @@ mold.h
 integers.h
 /home/jjk/project/mold2/my_mold/integers.h
 
+/home/jjk/project/mold2/my_mold/elf_symbol.h
+mold.h
+/home/jjk/project/mold2/my_mold/mold.h
+
 /home/jjk/project/mold2/my_mold/filetype.h
 mold.h
 /home/jjk/project/mold2/my_mold/mold.h
@@ -50,11 +36,11 @@ mold.h
 mold.h
 /home/jjk/project/mold2/my_mold/mold.h
 
-/home/jjk/project/mold2/my_mold/inputefile.c
+/home/jjk/project/mold2/my_mold/input_file.c
 mold.h
 /home/jjk/project/mold2/my_mold/mold.h
 
-/home/jjk/project/mold2/my_mold/inputefile.h
+/home/jjk/project/mold2/my_mold/input_file.h
 stdbool.h
 -
 mold.h
@@ -62,6 +48,20 @@ mold.h
 
 /home/jjk/project/mold2/my_mold/integers.h
 stdint.h
+-
+
+/home/jjk/project/mold2/my_mold/mapped_file.h
+mold.h
+/home/jjk/project/mold2/my_mold/mold.h
+sys/stat.h
+-
+fcntl.h
+-
+unistd.h
+-
+errno.h
+-
+sys/mman.h
 -
 
 /home/jjk/project/mold2/my_mold/mold.h
@@ -76,6 +76,8 @@ stdbool.h
 string.h
 -
 stdint.h
+-
+assert.h
 -
 uthash.h
 /home/jjk/project/mold2/my_mold/uthash.h
@@ -97,20 +99,20 @@ config.h
 /home/jjk/project/mold2/my_mold/config.h
 symbol.h
 /home/jjk/project/mold2/my_mold/symbol.h
-MappedFile.h
-/home/jjk/project/mold2/my_mold/MappedFile.h
-outputfile.h
-/home/jjk/project/mold2/my_mold/outputfile.h
+mapped_file.h
+/home/jjk/project/mold2/my_mold/mapped_file.h
+output_file.h
+/home/jjk/project/mold2/my_mold/output_file.h
 filetype.h
 /home/jjk/project/mold2/my_mold/filetype.h
-inputefile.h
-/home/jjk/project/mold2/my_mold/inputefile.h
+input_file.h
+/home/jjk/project/mold2/my_mold/input_file.h
 cmdline.h
 /home/jjk/project/mold2/my_mold/cmdline.h
 hashmap.h
 /home/jjk/project/mold2/my_mold/hashmap.h
-ELFSymbol.h
-/home/jjk/project/mold2/my_mold/ELFSymbol.h
+elf_symbol.h
+/home/jjk/project/mold2/my_mold/elf_symbol.h
 
 /home/jjk/project/mold2/my_mold/new_vector.h
 stdio.h
@@ -120,7 +122,7 @@ stdlib.h
 string.h
 -
 
-/home/jjk/project/mold2/my_mold/outputfile.h
+/home/jjk/project/mold2/my_mold/output_file.h
 mold.h
 /home/jjk/project/mold2/my_mold/mold.h
 

@@ -419,10 +419,9 @@ MergeableSection *split_section(Context *ctx,InputSection *sec,ObjectFile *file,
             VectorNew(&rec->hashes,1);
 
             VectorAdd(&rec->strings,&substr,sizeof(char *));
-            VectorAdd(&rec->frag_offsets,(u32)(substr.data - begin),sizeof(u32));
-            u64 hash = hash_string(substr.data);
+            VectorAdd(&rec->frag_offsets,(u32 *)(substr.data - begin),sizeof(u32));
+            u64 hash = hash_string((char *)substr.data);
             VectorAdd(&rec->hashes,&hash,sizeof(u64));
-
         }
     } else {
         if (data.size % entsize)
@@ -435,8 +434,8 @@ MergeableSection *split_section(Context *ctx,InputSection *sec,ObjectFile *file,
             VectorNew(&rec->hashes,1);
 
             VectorAdd(&rec->strings,&substr,sizeof(char *));
-            VectorAdd(&rec->frag_offsets,(u32)(substr.data - begin),sizeof(u32));
-            u64 hash = hash_string(substr.data);
+            VectorAdd(&rec->frag_offsets,(u32 *)(substr.data - begin),sizeof(u32));
+            u64 hash = hash_string((char *)substr.data);
             VectorAdd(&rec->hashes,&hash,sizeof(u64));
         }
     }
@@ -475,13 +474,13 @@ SectionFragment *get_fragment(i64 offset, MergeableSection *m) {
     vec = m->frag_offsets;
 
     i64 *vec_data = (i64 *)vec.data;
-    int vec_size = VectorSize(&vec);
+    int vec_size = vec.size;
     int idx = UpperBound(vec_data, vec_size, offset) - 1;
     if (idx >= 0) {
         SectionFragment *result = (SectionFragment *)m->fragments.data[idx];
         return result;
     } else {
-        SectionFragment *result = {NULL, 0};
+        SectionFragment *result = NULL;
         return result;
     }
 }
@@ -491,8 +490,8 @@ void file_resolve_section_pieces(Context *ctx,ObjectFile *file) {
         if (m) {
             VectorNew(&(m->fragments),m->strings.size);
             for(i64 i = 0;i < m->strings.size;i++) {
-                VectorAdd(&(m->fragments),merge_sec_insert(ctx,(StringView *)m->strings.data[i], m->hashes.data[i],
-                                                 m->p2align,m),sizeof(SectionFragment *));
+                VectorAdd(&(m->fragments),merge_sec_insert(ctx,(StringView *)m->strings.data[i],(u64)m->hashes.data[i],
+                                                 m->p2align,m->parent),sizeof(SectionFragment *));
             }
         }
     }

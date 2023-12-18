@@ -57,44 +57,44 @@ include CMakeFiles/mymold.dir/progress.make
 # Include the compile flags for this target's objects.
 include CMakeFiles/mymold.dir/flags.make
 
-CMakeFiles/mymold.dir/input-sections.c.o: CMakeFiles/mymold.dir/flags.make
-CMakeFiles/mymold.dir/input-sections.c.o: ../input-sections.c
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/jjk/project/mold2/my_mold/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Building C object CMakeFiles/mymold.dir/input-sections.c.o"
-	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -o CMakeFiles/mymold.dir/input-sections.c.o   -c /home/jjk/project/mold2/my_mold/input-sections.c
+CMakeFiles/mymold.dir/input_sections.c.o: CMakeFiles/mymold.dir/flags.make
+CMakeFiles/mymold.dir/input_sections.c.o: ../input_sections.c
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/jjk/project/mold2/my_mold/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Building C object CMakeFiles/mymold.dir/input_sections.c.o"
+	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -o CMakeFiles/mymold.dir/input_sections.c.o   -c /home/jjk/project/mold2/my_mold/input_sections.c
 
-CMakeFiles/mymold.dir/input-sections.c.i: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing C source to CMakeFiles/mymold.dir/input-sections.c.i"
-	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -E /home/jjk/project/mold2/my_mold/input-sections.c > CMakeFiles/mymold.dir/input-sections.c.i
+CMakeFiles/mymold.dir/input_sections.c.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing C source to CMakeFiles/mymold.dir/input_sections.c.i"
+	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -E /home/jjk/project/mold2/my_mold/input_sections.c > CMakeFiles/mymold.dir/input_sections.c.i
 
-CMakeFiles/mymold.dir/input-sections.c.s: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling C source to assembly CMakeFiles/mymold.dir/input-sections.c.s"
-	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -S /home/jjk/project/mold2/my_mold/input-sections.c -o CMakeFiles/mymold.dir/input-sections.c.s
+CMakeFiles/mymold.dir/input_sections.c.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling C source to assembly CMakeFiles/mymold.dir/input_sections.c.s"
+	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -S /home/jjk/project/mold2/my_mold/input_sections.c -o CMakeFiles/mymold.dir/input_sections.c.s
 
-CMakeFiles/mymold.dir/inputefile.c.o: CMakeFiles/mymold.dir/flags.make
-CMakeFiles/mymold.dir/inputefile.c.o: ../inputefile.c
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/jjk/project/mold2/my_mold/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_2) "Building C object CMakeFiles/mymold.dir/inputefile.c.o"
-	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -o CMakeFiles/mymold.dir/inputefile.c.o   -c /home/jjk/project/mold2/my_mold/inputefile.c
+CMakeFiles/mymold.dir/input_file.c.o: CMakeFiles/mymold.dir/flags.make
+CMakeFiles/mymold.dir/input_file.c.o: ../input_file.c
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/jjk/project/mold2/my_mold/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_2) "Building C object CMakeFiles/mymold.dir/input_file.c.o"
+	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -o CMakeFiles/mymold.dir/input_file.c.o   -c /home/jjk/project/mold2/my_mold/input_file.c
 
-CMakeFiles/mymold.dir/inputefile.c.i: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing C source to CMakeFiles/mymold.dir/inputefile.c.i"
-	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -E /home/jjk/project/mold2/my_mold/inputefile.c > CMakeFiles/mymold.dir/inputefile.c.i
+CMakeFiles/mymold.dir/input_file.c.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing C source to CMakeFiles/mymold.dir/input_file.c.i"
+	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -E /home/jjk/project/mold2/my_mold/input_file.c > CMakeFiles/mymold.dir/input_file.c.i
 
-CMakeFiles/mymold.dir/inputefile.c.s: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling C source to assembly CMakeFiles/mymold.dir/inputefile.c.s"
-	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -S /home/jjk/project/mold2/my_mold/inputefile.c -o CMakeFiles/mymold.dir/inputefile.c.s
+CMakeFiles/mymold.dir/input_file.c.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling C source to assembly CMakeFiles/mymold.dir/input_file.c.s"
+	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -S /home/jjk/project/mold2/my_mold/input_file.c -o CMakeFiles/mymold.dir/input_file.c.s
 
-CMakeFiles/mymold.dir/output-chunks.c.o: CMakeFiles/mymold.dir/flags.make
-CMakeFiles/mymold.dir/output-chunks.c.o: ../output-chunks.c
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/jjk/project/mold2/my_mold/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_3) "Building C object CMakeFiles/mymold.dir/output-chunks.c.o"
-	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -o CMakeFiles/mymold.dir/output-chunks.c.o   -c /home/jjk/project/mold2/my_mold/output-chunks.c
+CMakeFiles/mymold.dir/output_chunks.c.o: CMakeFiles/mymold.dir/flags.make
+CMakeFiles/mymold.dir/output_chunks.c.o: ../output_chunks.c
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/jjk/project/mold2/my_mold/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_3) "Building C object CMakeFiles/mymold.dir/output_chunks.c.o"
+	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -o CMakeFiles/mymold.dir/output_chunks.c.o   -c /home/jjk/project/mold2/my_mold/output_chunks.c
 
-CMakeFiles/mymold.dir/output-chunks.c.i: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing C source to CMakeFiles/mymold.dir/output-chunks.c.i"
-	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -E /home/jjk/project/mold2/my_mold/output-chunks.c > CMakeFiles/mymold.dir/output-chunks.c.i
+CMakeFiles/mymold.dir/output_chunks.c.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing C source to CMakeFiles/mymold.dir/output_chunks.c.i"
+	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -E /home/jjk/project/mold2/my_mold/output_chunks.c > CMakeFiles/mymold.dir/output_chunks.c.i
 
-CMakeFiles/mymold.dir/output-chunks.c.s: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling C source to assembly CMakeFiles/mymold.dir/output-chunks.c.s"
-	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -S /home/jjk/project/mold2/my_mold/output-chunks.c -o CMakeFiles/mymold.dir/output-chunks.c.s
+CMakeFiles/mymold.dir/output_chunks.c.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling C source to assembly CMakeFiles/mymold.dir/output_chunks.c.s"
+	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -S /home/jjk/project/mold2/my_mold/output_chunks.c -o CMakeFiles/mymold.dir/output_chunks.c.s
 
 CMakeFiles/mymold.dir/xxhash.c.o: CMakeFiles/mymold.dir/flags.make
 CMakeFiles/mymold.dir/xxhash.c.o: ../xxhash.c
@@ -137,9 +137,9 @@ CMakeFiles/mymold.dir/main.c.s: cmake_force
 
 # Object files for target mymold
 mymold_OBJECTS = \
-"CMakeFiles/mymold.dir/input-sections.c.o" \
-"CMakeFiles/mymold.dir/inputefile.c.o" \
-"CMakeFiles/mymold.dir/output-chunks.c.o" \
+"CMakeFiles/mymold.dir/input_sections.c.o" \
+"CMakeFiles/mymold.dir/input_file.c.o" \
+"CMakeFiles/mymold.dir/output_chunks.c.o" \
 "CMakeFiles/mymold.dir/xxhash.c.o" \
 "CMakeFiles/mymold.dir/passes.c.o" \
 "CMakeFiles/mymold.dir/main.c.o"
@@ -147,9 +147,9 @@ mymold_OBJECTS = \
 # External object files for target mymold
 mymold_EXTERNAL_OBJECTS =
 
-../mymold: CMakeFiles/mymold.dir/input-sections.c.o
-../mymold: CMakeFiles/mymold.dir/inputefile.c.o
-../mymold: CMakeFiles/mymold.dir/output-chunks.c.o
+../mymold: CMakeFiles/mymold.dir/input_sections.c.o
+../mymold: CMakeFiles/mymold.dir/input_file.c.o
+../mymold: CMakeFiles/mymold.dir/output_chunks.c.o
 ../mymold: CMakeFiles/mymold.dir/xxhash.c.o
 ../mymold: CMakeFiles/mymold.dir/passes.c.o
 ../mymold: CMakeFiles/mymold.dir/main.c.o

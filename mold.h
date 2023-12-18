@@ -9,7 +9,7 @@
 #include <stdbool.h>
 #include <string.h>
 #include <stdint.h>
-
+#include <assert.h>
 typedef struct Context Context;
 typedef struct StringView{
     const char* data;
@@ -34,7 +34,7 @@ typedef struct OutputSectionKey OutputSectionKey;
 #include "uthash.h"
 #include "config.h"
 #include "symbol.h"
-#include "MappedFile.h"
+#include "mapped_file.h"
 // 定义上下文信息的结构体
 ARM32 target;
 
@@ -134,7 +134,7 @@ typedef struct {
     u64 value;
 } SectionOrder;
 
-#include "outputfile.h"
+#include "output_file.h"
 typedef enum {
     SEPARATE_LOADABLE_SEGMENTS,
     SEPARATE_CODE,
@@ -229,10 +229,10 @@ struct Context{
 } ;
 
 #include "filetype.h"
-#include "inputefile.h"
+#include "input_file.h"
 #include "cmdline.h"
 #include "hashmap.h"
-#include "ELFSymbol.h"
+#include "elf_symbol.h"
 
 static inline i64 get_shndx(ElfSym *esym) {
     if (*esym->st_shndx.val == SHN_XINDEX)

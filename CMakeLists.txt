@@ -13,9 +13,9 @@ endif()
 file(GLOB SOURCES "${CMAKE_SOURCE_DIR}/*.c")
 
 add_executable(mymold
-    ${CMAKE_SOURCE_DIR}/input-sections.c
-    ${CMAKE_SOURCE_DIR}/inputefile 
-    ${CMAKE_SOURCE_DIR}/output-chunks.c
+    ${CMAKE_SOURCE_DIR}/input_sections.c
+    ${CMAKE_SOURCE_DIR}/input_file 
+    ${CMAKE_SOURCE_DIR}/output_chunks.c
     ${CMAKE_SOURCE_DIR}/xxhash.c
     ${CMAKE_SOURCE_DIR}/passes.c
     ${CMAKE_SOURCE_DIR}/main.c
