@@ -1,0 +1,1 @@
+/usr/bin/cc -g  -rdynamic CMakeFiles/mymold.dir/test.c.o CMakeFiles/mymold.dir/home/jjk/project/mold2/my_mold/vector.c.o  -o mymold 

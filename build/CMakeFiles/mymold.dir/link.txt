@@ -1,0 +1,1 @@
+/usr/bin/cc -g  -rdynamic CMakeFiles/mymold.dir/input-sections.c.o CMakeFiles/mymold.dir/inputefile.c.o CMakeFiles/mymold.dir/output-chunks.c.o CMakeFiles/mymold.dir/xxhash.c.o CMakeFiles/mymold.dir/passes.c.o CMakeFiles/mymold.dir/main.c.o  -o ../mymold 

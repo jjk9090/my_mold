@@ -1,0 +1,1 @@
+/usr/bin/cc -g  -rdynamic CMakeFiles/mymold.dir/a.c.o CMakeFiles/mymold.dir/b.c.o  -o mymold 

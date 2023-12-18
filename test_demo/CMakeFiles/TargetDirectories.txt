@@ -1,0 +1,3 @@
+/home/jjk/project/mold2/my_mold/test_demo/CMakeFiles/rebuild_cache.dir
+/home/jjk/project/mold2/my_mold/test_demo/CMakeFiles/edit_cache.dir
+/home/jjk/project/mold2/my_mold/test_demo/CMakeFiles/mymold.dir
