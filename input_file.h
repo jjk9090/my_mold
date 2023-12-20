@@ -14,8 +14,8 @@ typedef struct SmartPointer {
 typedef struct  
 {
     /* data */
-    vector shard_offsets;
     Chunk *chunk;
+    vector shard_offsets;
 
     my_hash_element *map;
 } MergedSection;
@@ -23,6 +23,7 @@ typedef struct
 typedef struct SectionFragment {
     MergedSection *output_section;
     u32 offset;
+    u8 p2align;
     bool is_alive;
 } SectionFragment;
 

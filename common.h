@@ -21,4 +21,16 @@ static inline void push_back(Context* ctx, Symbol* value) {
     }
 }
 
+
+static inline bool has_single_bit(unsigned long long val) {
+    // 使用 Brian Kernighan's Algorithm 检查val中位为1的个数是否为1
+    return val && !(val & (val - 1));
+}
+
+static inline u64 align_to(u64 val, u64 align) {
+    if (align == 0)
+        return val;
+    assert(has_single_bit(align));
+    return (val + align - 1) & ~(align - 1);
+}
 #endif

@@ -26,12 +26,12 @@ static inline void free_symbol_table(Context *ctx) {
 }
 
 
-static inline void merger_sec_insert_element(my_hash_element *map,char *key, void *value/*u64 hash*/) {
+static inline void merger_sec_insert_element(MergedSection *sec,char *key, void *value/*u64 hash*/) {
     my_hash_element *element = (my_hash_element *)malloc(sizeof(my_hash_element));
     element->key = strdup(key);
     element->value = value;
     // element->hh.hashv = hash; 
-    HASH_ADD(hh, map, key, sizeof(char *), element); // 添加元素
+    HASH_ADD(hh, sec->map, key, sizeof(char *), element); // 添加元素
 }
 
 static inline void out_sec_insert_element(OutputSection_element *map,OutputSectionKey *key, void *value/*u64 hash*/) {

@@ -32,7 +32,6 @@ static inline void VectorAdd(vector* arr, void* element, size_t element_size) {
         // 分配内存空间并复制元素的值
         arr->data[arr->size] = malloc(element_size);
         arr->data[arr->size] = element;
-        // memcpy(arr->data[arr->size], element, element_size);
         // void *element1 = element;
         // void *element2 = arr->data[arr->size];
         arr->size++;

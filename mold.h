@@ -81,7 +81,7 @@ typedef struct {
     ObjectFile *file;
     OutputSection *output_section;
     u64 sh_size;
-    StringView contents;
+    StringView *contents;
 
     i32 fde_begin;
     i32 fde_end;
@@ -95,7 +95,7 @@ typedef struct {
     u8 p2align;
     bool is_visited;
     bool is_alive;
-
+    bool is_constucted;
 } InputSection;
 
 // ObjectFile 结构体
@@ -258,6 +258,7 @@ uint64_t hash_string(char *str);
 SectionFragment *merge_sec_insert(Context *ctx, StringView *data, u64 hash,
                          i64 p2align,MergedSection *sec);
 void file_resolve_section_pieces(Context *ctx,ObjectFile *file);
+void assign_offsets(Context *ctx,MergedSection *sec);
 // 获取输入input_section
 static inline ElfShdr *get_shdr(ObjectFile *file,int shndx) {
   if (shndx < file->inputfile.elf_sections_num)
@@ -270,10 +271,16 @@ static inline char* get_name(ObjectFile *file,int shndx) {
     return (char *)file->inputfile.shstrtab.data  + *file->inputfile.elf_sections[shndx]->sh_name.val;
 }
 
-inline void ELFSym_set_frag(SectionFragment *frag,ELFSymbol *sym) {
-  uintptr_t addr = (uintptr_t)frag;
-  assert((addr & TAG_MASK) == 0);
-  sym->origin = addr | TAG_FRAG;
+static inline void ELFSym_set_frag(SectionFragment *frag,ELFSymbol *sym) {
+    uintptr_t addr = (uintptr_t)frag;
+    assert((addr & TAG_MASK) == 0);
+    sym->origin = addr | TAG_FRAG;
+}
+
+inline ElfRel *get_rels(Context *ctx,ObjectFile *file,InputSection *sec) {
+    if (sec->relsec_idx == -1)
+        return NULL;
+    // return get_data(ctx,file->elf_sections[sec->relsec_idx])
 }
 #endif  // 结束头文件保护
 

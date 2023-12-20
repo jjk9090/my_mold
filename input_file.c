@@ -196,6 +196,8 @@ void initialize_sections(Context *ctx,ObjectFile *file) {
     file->num_sections = num_sections;
     for (size_t i = 0; elf_sections[i] != NULL; ++i) {
         ElfShdr* shdr = elf_sections[i];
+        file->sections[i]->is_alive = true;
+        file->sections[i]->is_constucted = false;
         if ((*shdr->sh_flags.val & SHF_EXCLUDE) && !(*shdr->sh_flags.val & SHF_ALLOC) &&
             *shdr->sh_type.val != SHT_LLVM_ADDRSIG && !ctx->arg.relocatable)
             continue;
@@ -211,12 +213,14 @@ void initialize_sections(Context *ctx,ObjectFile *file) {
             default: {
                 uint16_t value = (shdr->sh_name.val[1] << 8) | shdr->sh_name.val[0];
                 char *name = (char *)(shstrtab.data + value);
-                if (name == ".note.GNU-stack" && !ctx->arg.relocatable) {
+                if (!strcmp(name,".note.GNU-stack") && !ctx->arg.relocatable) {
                     if (*shdr->sh_flags.val & SHF_EXECINSTR) {
                     }
                     continue;
                 }
-                printf("%s\n",name);
+                printf("???%s\n",name);
+                file->sections[i]->contents = (StringView *)malloc(sizeof(StringView));
+                file->sections[i]->is_constucted = true;
                 define_input_section(file,ctx,i);              
                 break;
             }
@@ -372,16 +376,16 @@ size_t find_null(const char* data, size_t data_size, u64 entsize) {
     return data_size; // 返回 data_size 表示未找到 null 字符
 }
 
-StringView create_string_view(const char* data, size_t size) {
-    StringView view;
-    view.data = data;
-    view.size = size;
+StringView *create_string_view(const char* data, size_t size) {
+    StringView *view = (StringView *)malloc(sizeof(StringView));
+    view->data = data;
+    view->size = size;
     return view;
 }
 // 截取子串函数
-StringView substring(StringView view, size_t start, size_t length) {
-    const char* data = view.data + start;
-    size_t size = (length <= view.size - start) ? length : (view.size - start);
+StringView *substring(StringView *view, size_t start, size_t length) {
+    const char* data = view->data + start;
+    size_t size = (length <= view->size - start) ? length : (view->size - start);
     return create_string_view(data, size);
 }
 MergeableSection *split_section(Context *ctx,InputSection *sec,ObjectFile *file,int i) {
@@ -406,36 +410,37 @@ MergeableSection *split_section(Context *ctx,InputSection *sec,ObjectFile *file,
         return sec;
     input_sec_uncompress(ctx,file,i);
 
-    StringView data = sec->contents;
-    const char *begin = data.data;
+    StringView *data = sec->contents;
+    const char *begin = data->data;
     if (*shdr->sh_flags.val & SHF_STRINGS) {
-        while(data.size != 0) {
-            size_t end = find_null(data.data,data.size,entsize);
-            StringView substr = substring(data, 0, end + entsize);
-            data = substring(data,end + entsize, data.size - (end + entsize));
+        VectorNew(&rec->strings,1);
+        VectorNew(&rec->frag_offsets,1);
+        VectorNew(&rec->hashes,1);
+        while(data->size != 0) {
+            size_t end = find_null(data->data,data->size,entsize);
+            StringView *substr = substring(data, 0, end + entsize);
+            data = substring(data,end + entsize, data->size - (end + entsize));
 
-            VectorNew(&rec->strings,1);
-            VectorNew(&rec->frag_offsets,1);
-            VectorNew(&rec->hashes,1);
-
-            VectorAdd(&rec->strings,&substr,sizeof(char *));
-            VectorAdd(&rec->frag_offsets,(u32 *)(substr.data - begin),sizeof(u32));
-            u64 hash = hash_string((char *)substr.data);
+            VectorAdd(&rec->strings,substr,sizeof(char *));
+            
+            VectorAdd(&rec->frag_offsets,(u32 *)(substr->data - begin),sizeof(u32));
+            u64 hash = hash_string((char *)substr->data);
             VectorAdd(&rec->hashes,&hash,sizeof(u64));
         }
     } else {
-        if (data.size % entsize)
+        if (data->size % entsize)
             Fatal(": section size is not multiple of sh_entsize");
-        while(data.size != 0) {
-            StringView substr = substring(data,0,entsize);
-            data = substring(data,entsize, data.size - (entsize));
+        while(data->size != 0) {
+            StringView *substr = substring(data,0,entsize);
+            data = substring(data,entsize, data->size - (entsize));
             VectorNew(&rec->strings,1);
             VectorNew(&rec->frag_offsets,1);
             VectorNew(&rec->hashes,1);
 
             VectorAdd(&rec->strings,&substr,sizeof(char *));
-            VectorAdd(&rec->frag_offsets,(u32 *)(substr.data - begin),sizeof(u32));
-            u64 hash = hash_string((char *)substr.data);
+            
+            VectorAdd(&rec->frag_offsets,(u32 *)(substr->data - begin),sizeof(u32));
+            u64 hash = hash_string((char *)substr->data);
             VectorAdd(&rec->hashes,&hash,sizeof(u64));
         }
     }
@@ -446,11 +451,17 @@ void initialize_mergeable_sections(Context *ctx,ObjectFile *file) {
     VectorNew(&(file->mergeable_sections),file->num_sections);
 
     for (i64 i = 1; i < num_sections; i++) {
-        InputSection *isec = sections[i];
+        if (file->sections == NULL)
+            break;
+        InputSection *isec = file->sections[i];
         if (isec) {
             MergeableSection *m = split_section(ctx, isec,file,i);
-            VectorAdd(&(file->mergeable_sections),m,sizeof(MergeableSection *));
-            isec->is_alive = false;
+            
+            if (m) {
+                VectorAdd(&(file->mergeable_sections),m,sizeof(MergeableSection *));
+                isec->is_alive = false;
+            }
+            
         }
     }
 }
@@ -485,20 +496,30 @@ SectionFragment *get_fragment(i64 offset, MergeableSection *m) {
     }
 }
 void file_resolve_section_pieces(Context *ctx,ObjectFile *file) {
-    for(int i;;i++) {
+    for(int i = 0;;i++) {
         MergeableSection *m = file->mergeable_sections.data[i];
+        if (m == NULL)
+            break;
         if (m) {
             VectorNew(&(m->fragments),m->strings.size);
+            printf("%s\n",((StringView *)(m->strings.data[1]))->data);
             for(i64 i = 0;i < m->strings.size;i++) {
+                StringView *temp = (StringView *)m->strings.data;
                 VectorAdd(&(m->fragments),merge_sec_insert(ctx,(StringView *)m->strings.data[i],(u64)m->hashes.data[i],
                                                  m->p2align,m->parent),sizeof(SectionFragment *));
             }
         }
     }
+     
 
+    // Attach section pieces to symbols.
     for (i64 i = 1;; i++) {
+        if (file->inputfile.symbols.data == NULL)
+            break;
         ELFSymbol *sym = (ELFSymbol *)file->inputfile.symbols.data[i];
         ElfSym *esym = file->inputfile.elf_syms[i];
+        if (esym == NULL)
+            break;
         if (is_abs(esym) || is_common(esym) || is_undef(esym))
             continue;
         MergeableSection *m = file->mergeable_sections.data[get_shndx(esym)];
@@ -512,5 +533,34 @@ void file_resolve_section_pieces(Context *ctx,ObjectFile *file) {
             Fatal(": bad symbol value: ");
         ELFSym_set_frag(frag,sym);
         sym->value = frag_offset;
+    }
+
+    // Compute the size of frag_syms.
+    i64 nfrag_syms = 0;
+    for (int i = 0;;i++) {
+        if (file->sections == NULL)
+            break;
+        InputSection *isec = file->sections[i];
+        if (isec == NULL) 
+            break;
+        if (isec && isec->is_alive && (*get_shdr(file,i)->sh_flags.val & SHF_ALLOC)) {
+            // for(int j = 0;;j++) {
+            //     ElfRel *r = get_rels();
+            // } 0
+        }
+    }
+
+    i64 idx = 0;
+    for (int i = 0;;i++) {
+        if (file->sections == NULL)
+            break;
+        InputSection *isec = file->sections[i];
+        if (isec == NULL) 
+            break;
+        if (!isec && !isec->is_alive && !(*get_shdr(file,i)->sh_flags.val & SHF_ALLOC)) {
+            // for(int j = 0;;j++) {
+            //     ElfRel *r = get_rels();
+            // }
+        }
     }
 }

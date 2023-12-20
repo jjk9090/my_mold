@@ -169,25 +169,27 @@ SectionFragment *SectionFragment_create(MergedSection *sec,bool is_alive) {
 void insert(MergedSection *sec,Context *ctx,char *data,u64 hash,i64 p2align) {
     bool is_alive = !ctx->arg.gc_sections || !(*sec->chunk->shdr.sh_flags.val & SHF_ALLOC);
     SectionFragment *frag = SectionFragment_create(sec,is_alive);
-    merger_sec_insert_element(sec->map,data,frag/*,hash*/);
+    merger_sec_insert_element(sec,data,frag/*,hash*/);
 }
 
 // 增加.comment段等
-void add_comment_string(Context *ctx, char *str) {
+MergedSection *add_comment_string(Context *ctx, char *str) {
     MergedSection *sec = get_instance(ctx, ".comment", SHT_PROGBITS,
                                     SHF_MERGE | SHF_STRINGS, 1, 1);
-
     char * buf = save_string(ctx, str,strlen(str));
     // std::string_view data(buf.data(), buf.size() + 1);
     // sec->insert(ctx, data, hash_string(data), 0);
     u64 hash = hash_string(buf);
     insert(sec,ctx,buf,hash,0);
+    return sec;
 }
 
 void compute_merged_section_sizes(Context *ctx) {
+    MergedSection *sec;
     if (!ctx->arg.oformat_binary) {
-        add_comment_string(ctx, mold_version);
+        sec = add_comment_string(ctx, mold_version);
     }
+    assign_offsets(ctx,sec);
 }
 bool sec_order_find (Context *ctx,char *name) {
     if (ctx->arg.section_order.size != 0) {
@@ -428,26 +430,25 @@ OutputSection *create_a_output_sections(Context *ctx,char *name,u32 type, u64 fl
     return output_section;
 }
 
-// 比较函数
+// 比较函数，用于排序
 int compareChunks(const void* a, const void* b) {
-    const Chunk* x = *(const Chunk**)a;
-    const Chunk* y = *(const Chunk**)b;
-    if (x == NULL || y == NULL) {
-        return 0;
+    Chunk* chunkA = (Chunk* )a;
+    Chunk* chunkB = (Chunk* )b;
+    
+    if (chunkA->name && chunkB->name) {
+        // 按照指定的排序规则进行比较
+        int nameComparison = strcmp(chunkA->name, chunkB->name);
+        if (nameComparison != 0) {
+            return nameComparison;
+        }
     }
-    // 按照指定的条件进行比较
-    if (!x->name && !y->name) {
-        int cmp1 = strcmp(x->name, y->name);
-        if (cmp1 != 0)
-            return cmp1;
+    
+    
+    if (*chunkA->shdr.sh_type.val != *chunkB->shdr.sh_type.val) {
+        return *chunkA->shdr.sh_type.val - *chunkB->shdr.sh_type.val;
     }
-    // if ((const ElfShdr *)(x->shdr) != NULL && (const ElfShdr *)y->shdr != NULL) {
-    //     int cmp2 = *x->shdr.sh_type.val - *y->shdr.sh_type.val;
-    //     if (cmp2 != 0)
-    //         return cmp2;
-        
-    //     return *x->shdr.sh_flags.val - *y->shdr.sh_flags.val;
-    // }
+    
+    return *chunkA->shdr.sh_flags.val - *chunkB->shdr.sh_flags.val;
 }
 // 创造输出段 Create output sections for input sections.
 void create_output_sections(Context *ctx) {
@@ -465,7 +466,7 @@ void create_output_sections(Context *ctx) {
             }
             InputSection *isec = (InputSection *)malloc(sizeof(InputSection));
             isec = file->sections[j];  
-            if (!isec || !isec->is_alive)
+            if (!isec || !isec->is_alive || !isec->is_constucted)
                 continue;   
             ElfShdr *shdr = get_shdr(file,j);
             if (ctx->arg.relocatable && (*shdr->sh_flags.val & SHF_GROUP)) {
@@ -474,7 +475,6 @@ void create_output_sections(Context *ctx) {
                 VectorAdd(&(ctx->osec_pool),osec,sizeof(OutputSection));
                 continue;
             }
-            // isec->output_section = 
             OutputSectionKey *key = get_output_section_key(ctx, isec,file,j);
             OutputSection *osec = create_a_output_sections(ctx, key->name, key->type, key->flags);
                 
@@ -488,7 +488,7 @@ void create_output_sections(Context *ctx) {
     VectorNew(&chunks,1);
     for(int i = 0;i < ctx->osec_pool.size;i++) {
         OutputSection *temp = ctx->osec_pool.data[i];
-        VectorAdd(&chunks,ctx->osec_pool.data[i],sizeof(OutputSection *));
+        VectorAdd(&chunks,temp->chunk,sizeof(Chunk *));
         VectorAdd(&ctx->chunks,ctx->osec_pool.data + i,sizeof(OutputSection *));
     }
 
@@ -503,6 +503,7 @@ void create_output_sections(Context *ctx) {
             InputSection *isec = file->sections[j];
             if (isec == NULL)
                 break;
+            isec->output_section = (OutputSection *)malloc(sizeof(OutputSection));
             VectorNew(&(isec->output_section->member),1);
             if (isec && isec->is_alive)
                 VectorAdd(&(isec->output_section->member),isec,sizeof(InputSection *));
@@ -513,20 +514,22 @@ void create_output_sections(Context *ctx) {
     for (int i = 0;i < ctx->merged_sections_count;i++) {
         MergedSection *osec = ctx->merged_sections.data[i];
         if (*osec->chunk->shdr.sh_size.val) {
-            VectorAdd(&chunks,osec,sizeof(MergedSection *));
+            VectorAdd(&chunks,osec->chunk,sizeof(Chunk *));
             VectorAdd(&ctx->chunks,osec,sizeof(MergedSection *));
         }
     }
     
     Chunk *temp = ((OutputSection *)(chunks.data[0]))->chunk;
     // 使用 qsort 函数对数组进行排序
-    // qsort(*chunks.data, chunks.size, sizeof(Chunk*), compareChunks);
-    
+    qsort(chunks.data[0], chunks.size, sizeof(Chunk *), compareChunks);
     // 打印排序后的结果
-    for (int i = 0; i < chunks.size; i++) {
-        printf("name: %s, sh_type: %d, sh_flags: %d\n", ((Chunk *)(chunks.data[i]))->name, *((Chunk *)(chunks.data[i]))->shdr.sh_type.val, *((Chunk *)(chunks.data[i]))->shdr.sh_flags.val);
-    }
     
+    for (int i = 0; i < chunks.size; i++) {
+        // 获取当前元素
+        Chunk* currentElement = chunks.data[i];
+        printf("name: %s\n", currentElement->name);
+        VectorAdd(&(ctx->chunks),currentElement,(sizeof(Chunk *)));
+    } 
 }
 
 void resolve_section_pieces(Context *ctx) {

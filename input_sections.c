@@ -25,10 +25,10 @@ void input_sec_uncompress(Context *ctx,ObjectFile *file,int i) {
 }
 void define_input_section(ObjectFile *file,Context *ctx,int i) {
     if (i < file->inputfile.elf_sections_num) {
-        file->sections[i]->contents.data = (char *)file->inputfile.inputfile_mf->data + *get_shdr(file,i)->sh_offset.val;
-        file->sections[i]->contents.size = (size_t)(*get_shdr(file,i)->sh_size.val);
+        file->sections[i]->contents->data = (char *)file->inputfile.inputfile_mf->data + *get_shdr(file,i)->sh_offset.val;
+        file->sections[i]->contents->size = (size_t)(*get_shdr(file,i)->sh_size.val);
     }
-    const char* startAddress = file->sections[i]->contents.data;
+    const char* startAddress = file->sections[i]->contents->data;
     // size_t size = file->sections[i]->contents.size;
     // char* buffer = malloc(size);
     // memcpy(buffer, startAddress, size);

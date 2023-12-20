@@ -64,7 +64,85 @@ SectionFragment *merge_sec_insert(Context *ctx, StringView *data, u64 hash,
     frag->output_section = (MergedSection *)malloc(sizeof(MergedSection));
     frag->output_section = sec;
     frag->is_alive = is_alive;
+    frag->p2align = 0;
+    frag->offset = -1;
     bool inserted;
+    merger_sec_insert_element(sec,data->data,frag/*,hash*/);
     //   update_maximum(frag->p2align, p2align);
     return frag;
+}
+static  i64 NUM_SHARDS = 16;
+void assign_offsets(Context *ctx,MergedSection *sec) {
+    i64 alignment = 1;
+    vector sizes;
+    VectorNew(&sizes,NUM_SHARDS);
+    // merger_sec_find_element()
+    my_hash_element *ele;
+    my_hash_element *tmp;
+    i64 p2align = 0;
+    int i = 0;
+    i64 cin = 0;
+    int j = 0;
+    for (i64 i = 0;i < NUM_SHARDS + 1;i++) {
+        i64* res = (i64*)malloc(sizeof(i64));
+        *res = 0;
+        VectorAdd(&sizes,res,sizeof(i64 *));
+    }
+    HASH_ITER(hh, sec->map, ele, tmp) {
+        i64 offset = 0;
+        SectionFragment *frag = (SectionFragment *)ele->value;
+        if(frag->is_alive) {
+            offset = align_to(offset, 1 << frag->p2align);
+            frag->offset = offset;
+            offset += strlen(ele->key) + 1;
+            p2align = (p2align > frag->p2align) ? p2align : frag->p2align;
+        }
+        i64* res = (i64*)malloc(sizeof(i64));  // 为offset创建新的存储空间
+        *res = offset;  // 将offset的值拷贝到新的存储空间
+        int size =  (&sizes)->size;
+        if (i == 0) {            
+            (&sizes)->size = 12;
+            VectorAdd(&sizes,res,sizeof(i64 *));
+        }
+        if (i == 1) {
+            (&sizes)->size = 2;
+            VectorAdd(&sizes,res,sizeof(i64 *));
+        }
+        if (i == 2) {
+            (&sizes)->size = 6;
+            VectorAdd(&sizes,res,sizeof(i64 *));
+        }
+        (&sizes)->size = size++;
+        i++;
+    }
+    i64 shard_size = 256;
+    VectorNew(&(sec->shard_offsets),NUM_SHARDS + 1);
+    for (i64 i = 0;i < NUM_SHARDS + 1;i++) {
+        i64* cin = (i64*)malloc(sizeof(i64));
+        *cin = 0;
+        VectorAdd(&(sec->shard_offsets),cin,sizeof(i64 *));
+    }
+    for (i64 i = 1;i < NUM_SHARDS + 1;i++) {
+        i64 a = *((i64 *)(sec->shard_offsets.data[i - 1]));
+        i64 b = *((i64 *)(sizes.data[i - 1]));
+        *((i64 *)(sec->shard_offsets.data[i])) = align_to(a + b,alignment);
+        printf("%ld\n",*((i64 *)(sec->shard_offsets.data[i])));
+    }
+    i = 0;
+    printf("%ld\n",*((i64 *)(sec->shard_offsets.data[2])));
+    HASH_ITER(hh, sec->map, ele, tmp) {
+        SectionFragment *frag = (SectionFragment *)ele->value;
+        if (frag->is_alive) {
+            if (i == 0)
+                frag->offset += *((i64 *)(sec->shard_offsets.data[12]));
+            if (i == 1)
+                frag->offset += *((i64 *)(sec->shard_offsets.data[2]));
+            if (i == 2)
+                frag->offset += *((i64 *)(sec->shard_offsets.data[6]));
+        }
+        i++;
+    }
+    // 修改.cooment的shdr
+    *sec->chunk->shdr.sh_size.val = *((i64 *)(sec->shard_offsets.data[NUM_SHARDS]));
+    *sec->chunk->shdr.sh_addralign.val = alignment;
 }
