@@ -361,59 +361,59 @@ EhFrameHdrSection *create_ehframehdr() {
 void create_synthetic_sections(Context *ctx) {
     if (ctx->arg.section_order.size == 0 || sec_order_find(ctx,"EHDR")) {
         ctx->ehdr = create_section_order_e(SHF_ALLOC);
-        VectorAdd(&(ctx->chunks),ctx->ehdr,sizeof(OutputEhdr *));
+        // VectorAdd(&(ctx->chunks),ctx->ehdr,sizeof(OutputEhdr *));
+        VectorAdd(&(ctx->chunks),ctx->ehdr->chunk,sizeof(Chunk *));
     } else {
         ctx->ehdr = create_section_order_e(0);
-        VectorAdd(&(ctx->chunks),ctx->ehdr,sizeof(OutputEhdr *));
+        VectorAdd(&(ctx->chunks),ctx->ehdr->chunk,sizeof(Chunk *));
     }
 
     if (ctx->arg.section_order.size == 0 || sec_order_find(ctx,"PHDR")) {
         ctx->phdr = create_section_order_p(SHF_ALLOC);
-        VectorAdd(&(ctx->chunks),ctx->phdr,sizeof(OutputPhdr *));
+        VectorAdd(&(ctx->chunks),ctx->phdr->chunk,sizeof(Chunk *));
     } else {
         ctx->phdr = create_section_order_p(0);
-        VectorAdd(&(ctx->chunks),ctx->phdr,sizeof(OutputPhdr *));
+        VectorAdd(&(ctx->chunks),ctx->phdr->chunk,sizeof(Chunk *));
     }
     if (ctx->arg.z_sectionheader) {
         ctx->shdr = create_section_order_s(0);
-        VectorAdd(&(ctx->chunks),ctx->shdr,sizeof(OutputShdr *));
+        VectorAdd(&(ctx->chunks),ctx->shdr->chunk,sizeof(Chunk *));
     }
 
     ctx->got = create_got(0);
-    VectorAdd(&(ctx->chunks),ctx->got,sizeof(GotSection *));
+    VectorAdd(&(ctx->chunks),ctx->got->chunk,sizeof(Chunk *));
     ctx->gotplt = create_got_plt(ctx);
-    VectorAdd(&(ctx->chunks),ctx->gotplt,sizeof(GotPltSection *));
+    VectorAdd(&(ctx->chunks),ctx->gotplt->chunk,sizeof(Chunk *));
 
     ctx->reldyn = create_reldyn();
-    VectorAdd(&(ctx->chunks),ctx->reldyn,sizeof(RelDynSection *));
+    VectorAdd(&(ctx->chunks),ctx->reldyn->chunk,sizeof(Chunk *));
     ctx->relplt = create_relplt();
-    VectorAdd(&(ctx->chunks),ctx->relplt,sizeof(RelPltSection *));
+    VectorAdd(&(ctx->chunks),ctx->relplt->chunk,sizeof(Chunk *));
 
     ctx->strtab = create_strtab();
-    VectorAdd(&(ctx->chunks),ctx->strtab,sizeof(StrtabSection *));
+    VectorAdd(&(ctx->chunks),ctx->strtab->chunk,sizeof(Chunk *));
 
     ctx->plt = create_plt();
-    VectorAdd(&(ctx->chunks),ctx->plt,sizeof(PltSection *));
+    VectorAdd(&(ctx->chunks),ctx->plt->chunk,sizeof(Chunk *));
 
     ctx->pltgot = create_plt_got();
-    VectorAdd(&(ctx->chunks),ctx->pltgot,sizeof(PltGotSection *));
-
+    VectorAdd(&(ctx->chunks),ctx->pltgot->chunk,sizeof(Chunk *));
     ctx->symtab = create_symtab();
-    VectorAdd(&(ctx->chunks),ctx->symtab,sizeof(SymtabSection *));
+    VectorAdd(&(ctx->chunks),ctx->symtab->chunk,sizeof(Chunk *));
 
     ctx->dynsym = create_dynsym();
-    VectorAdd(&(ctx->chunks),ctx->dynsym,sizeof(DynsymSection *));
+    VectorAdd(&(ctx->chunks),ctx->dynsym->chunk,sizeof(Chunk *));
 
     ctx->eh_frame = create_enframe();
-    VectorAdd(&(ctx->chunks),ctx->eh_frame,sizeof(EhFrameSection *));
+    VectorAdd(&(ctx->chunks),ctx->eh_frame->chunk,sizeof(Chunk *));
 
     if (ctx->shdr) {
         ctx->shstrtab = create_shstrtab();
-        VectorAdd(&(ctx->chunks),ctx->shdr,sizeof(ShstrtabSection *));
+        VectorAdd(&(ctx->chunks),ctx->shdr->chunk,sizeof(Chunk *));
     }
     if (ctx->arg.eh_frame_hdr) {
         ctx->eh_frame_hdr = create_ehframehdr();
-        VectorAdd(&(ctx->chunks),ctx->eh_frame_hdr,sizeof(EhFrameHdrSection *));
+        VectorAdd(&(ctx->chunks),ctx->eh_frame_hdr->chunk,sizeof(Chunk *));
     }
     if (ctx->arg.z_relro && ctx->arg.section_order.size == 0 &&
         ctx->arg.z_separate_code != SEPARATE_LOADABLE_SEGMENTS) {
@@ -434,21 +434,24 @@ OutputSection *create_a_output_sections(Context *ctx,char *name,u32 type, u64 fl
 int compareChunks(const void* a, const void* b) {
     Chunk* chunkA = (Chunk* )a;
     Chunk* chunkB = (Chunk* )b;
-    
     if (chunkA->name && chunkB->name) {
         // 按照指定的排序规则进行比较
         int nameComparison = strcmp(chunkA->name, chunkB->name);
-        if (nameComparison != 0) {
+        if (nameComparison != 0) 
             return nameComparison;
-        }
     }
     
     
-    if (*chunkA->shdr.sh_type.val != *chunkB->shdr.sh_type.val) {
-        return *chunkA->shdr.sh_type.val - *chunkB->shdr.sh_type.val;
-    }
+    if (*chunkA->shdr.sh_type.val <  *chunkB->shdr.sh_type.val) 
+        return -1;
+    else 
+        return 1;
+    if (*chunkA->shdr.sh_flags.val < *chunkB->shdr.sh_flags.val) 
+        return -1;
+    else 
+        return 1;
     
-    return *chunkA->shdr.sh_flags.val - *chunkB->shdr.sh_flags.val;
+    return 0;
 }
 // 创造输出段 Create output sections for input sections.
 void create_output_sections(Context *ctx) {
@@ -489,7 +492,6 @@ void create_output_sections(Context *ctx) {
     for(int i = 0;i < ctx->osec_pool.size;i++) {
         OutputSection *temp = ctx->osec_pool.data[i];
         VectorAdd(&chunks,temp->chunk,sizeof(Chunk *));
-        VectorAdd(&ctx->chunks,ctx->osec_pool.data + i,sizeof(OutputSection *));
     }
 
     for (int i = 0;;i++) {
@@ -515,19 +517,22 @@ void create_output_sections(Context *ctx) {
         MergedSection *osec = ctx->merged_sections.data[i];
         if (*osec->chunk->shdr.sh_size.val) {
             VectorAdd(&chunks,osec->chunk,sizeof(Chunk *));
-            VectorAdd(&ctx->chunks,osec,sizeof(MergedSection *));
         }
     }
     
-    Chunk *temp = ((OutputSection *)(chunks.data[0]))->chunk;
-    // 使用 qsort 函数对数组进行排序
-    qsort(chunks.data[0], chunks.size, sizeof(Chunk *), compareChunks);
-    // 打印排序后的结果
+    // 使用 qsort 函数对chunks进行排序
+    Chunk temp1[chunks.size];
+    for (int i = 0; i < chunks.size; i++) {
+        temp1[i] = *(Chunk *)(chunks.data[i]);
+    }
+    
+    qsort(temp1, chunks.size, sizeof(Chunk), compareChunks);
     
     for (int i = 0; i < chunks.size; i++) {
         // 获取当前元素
-        Chunk* currentElement = chunks.data[i];
+        Chunk* currentElement = &temp1[i];
         printf("name: %s\n", currentElement->name);
+        // 将chunks加入ctx->chunks
         VectorAdd(&(ctx->chunks),currentElement,(sizeof(Chunk *)));
     } 
 }
