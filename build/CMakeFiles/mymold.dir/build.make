@@ -57,9 +57,35 @@ include CMakeFiles/mymold.dir/progress.make
 # Include the compile flags for this target's objects.
 include CMakeFiles/mymold.dir/flags.make
 
+CMakeFiles/mymold.dir/arch-arm32.c.o: CMakeFiles/mymold.dir/flags.make
+CMakeFiles/mymold.dir/arch-arm32.c.o: ../arch-arm32.c
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/jjk/project/mold2/my_mold/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Building C object CMakeFiles/mymold.dir/arch-arm32.c.o"
+	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -o CMakeFiles/mymold.dir/arch-arm32.c.o   -c /home/jjk/project/mold2/my_mold/arch-arm32.c
+
+CMakeFiles/mymold.dir/arch-arm32.c.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing C source to CMakeFiles/mymold.dir/arch-arm32.c.i"
+	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -E /home/jjk/project/mold2/my_mold/arch-arm32.c > CMakeFiles/mymold.dir/arch-arm32.c.i
+
+CMakeFiles/mymold.dir/arch-arm32.c.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling C source to assembly CMakeFiles/mymold.dir/arch-arm32.c.s"
+	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -S /home/jjk/project/mold2/my_mold/arch-arm32.c -o CMakeFiles/mymold.dir/arch-arm32.c.s
+
+CMakeFiles/mymold.dir/thunks.c.o: CMakeFiles/mymold.dir/flags.make
+CMakeFiles/mymold.dir/thunks.c.o: ../thunks.c
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/jjk/project/mold2/my_mold/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_2) "Building C object CMakeFiles/mymold.dir/thunks.c.o"
+	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -o CMakeFiles/mymold.dir/thunks.c.o   -c /home/jjk/project/mold2/my_mold/thunks.c
+
+CMakeFiles/mymold.dir/thunks.c.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing C source to CMakeFiles/mymold.dir/thunks.c.i"
+	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -E /home/jjk/project/mold2/my_mold/thunks.c > CMakeFiles/mymold.dir/thunks.c.i
+
+CMakeFiles/mymold.dir/thunks.c.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling C source to assembly CMakeFiles/mymold.dir/thunks.c.s"
+	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -S /home/jjk/project/mold2/my_mold/thunks.c -o CMakeFiles/mymold.dir/thunks.c.s
+
 CMakeFiles/mymold.dir/input_sections.c.o: CMakeFiles/mymold.dir/flags.make
 CMakeFiles/mymold.dir/input_sections.c.o: ../input_sections.c
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/jjk/project/mold2/my_mold/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Building C object CMakeFiles/mymold.dir/input_sections.c.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/jjk/project/mold2/my_mold/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_3) "Building C object CMakeFiles/mymold.dir/input_sections.c.o"
 	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -o CMakeFiles/mymold.dir/input_sections.c.o   -c /home/jjk/project/mold2/my_mold/input_sections.c
 
 CMakeFiles/mymold.dir/input_sections.c.i: cmake_force
@@ -72,7 +98,7 @@ CMakeFiles/mymold.dir/input_sections.c.s: cmake_force
 
 CMakeFiles/mymold.dir/input_file.c.o: CMakeFiles/mymold.dir/flags.make
 CMakeFiles/mymold.dir/input_file.c.o: ../input_file.c
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/jjk/project/mold2/my_mold/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_2) "Building C object CMakeFiles/mymold.dir/input_file.c.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/jjk/project/mold2/my_mold/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_4) "Building C object CMakeFiles/mymold.dir/input_file.c.o"
 	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -o CMakeFiles/mymold.dir/input_file.c.o   -c /home/jjk/project/mold2/my_mold/input_file.c
 
 CMakeFiles/mymold.dir/input_file.c.i: cmake_force
@@ -85,7 +111,7 @@ CMakeFiles/mymold.dir/input_file.c.s: cmake_force
 
 CMakeFiles/mymold.dir/output_chunks.c.o: CMakeFiles/mymold.dir/flags.make
 CMakeFiles/mymold.dir/output_chunks.c.o: ../output_chunks.c
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/jjk/project/mold2/my_mold/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_3) "Building C object CMakeFiles/mymold.dir/output_chunks.c.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/jjk/project/mold2/my_mold/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_5) "Building C object CMakeFiles/mymold.dir/output_chunks.c.o"
 	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -o CMakeFiles/mymold.dir/output_chunks.c.o   -c /home/jjk/project/mold2/my_mold/output_chunks.c
 
 CMakeFiles/mymold.dir/output_chunks.c.i: cmake_force
@@ -98,7 +124,7 @@ CMakeFiles/mymold.dir/output_chunks.c.s: cmake_force
 
 CMakeFiles/mymold.dir/xxhash.c.o: CMakeFiles/mymold.dir/flags.make
 CMakeFiles/mymold.dir/xxhash.c.o: ../xxhash.c
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/jjk/project/mold2/my_mold/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_4) "Building C object CMakeFiles/mymold.dir/xxhash.c.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/jjk/project/mold2/my_mold/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_6) "Building C object CMakeFiles/mymold.dir/xxhash.c.o"
 	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -o CMakeFiles/mymold.dir/xxhash.c.o   -c /home/jjk/project/mold2/my_mold/xxhash.c
 
 CMakeFiles/mymold.dir/xxhash.c.i: cmake_force
@@ -111,7 +137,7 @@ CMakeFiles/mymold.dir/xxhash.c.s: cmake_force
 
 CMakeFiles/mymold.dir/passes.c.o: CMakeFiles/mymold.dir/flags.make
 CMakeFiles/mymold.dir/passes.c.o: ../passes.c
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/jjk/project/mold2/my_mold/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_5) "Building C object CMakeFiles/mymold.dir/passes.c.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/jjk/project/mold2/my_mold/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_7) "Building C object CMakeFiles/mymold.dir/passes.c.o"
 	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -o CMakeFiles/mymold.dir/passes.c.o   -c /home/jjk/project/mold2/my_mold/passes.c
 
 CMakeFiles/mymold.dir/passes.c.i: cmake_force
@@ -124,7 +150,7 @@ CMakeFiles/mymold.dir/passes.c.s: cmake_force
 
 CMakeFiles/mymold.dir/main.c.o: CMakeFiles/mymold.dir/flags.make
 CMakeFiles/mymold.dir/main.c.o: ../main.c
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/jjk/project/mold2/my_mold/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_6) "Building C object CMakeFiles/mymold.dir/main.c.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/jjk/project/mold2/my_mold/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_8) "Building C object CMakeFiles/mymold.dir/main.c.o"
 	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -o CMakeFiles/mymold.dir/main.c.o   -c /home/jjk/project/mold2/my_mold/main.c
 
 CMakeFiles/mymold.dir/main.c.i: cmake_force
@@ -137,6 +163,8 @@ CMakeFiles/mymold.dir/main.c.s: cmake_force
 
 # Object files for target mymold
 mymold_OBJECTS = \
+"CMakeFiles/mymold.dir/arch-arm32.c.o" \
+"CMakeFiles/mymold.dir/thunks.c.o" \
 "CMakeFiles/mymold.dir/input_sections.c.o" \
 "CMakeFiles/mymold.dir/input_file.c.o" \
 "CMakeFiles/mymold.dir/output_chunks.c.o" \
@@ -147,6 +175,8 @@ mymold_OBJECTS = \
 # External object files for target mymold
 mymold_EXTERNAL_OBJECTS =
 
+../mymold: CMakeFiles/mymold.dir/arch-arm32.c.o
+../mymold: CMakeFiles/mymold.dir/thunks.c.o
 ../mymold: CMakeFiles/mymold.dir/input_sections.c.o
 ../mymold: CMakeFiles/mymold.dir/input_file.c.o
 ../mymold: CMakeFiles/mymold.dir/output_chunks.c.o
@@ -155,7 +185,7 @@ mymold_EXTERNAL_OBJECTS =
 ../mymold: CMakeFiles/mymold.dir/main.c.o
 ../mymold: CMakeFiles/mymold.dir/build.make
 ../mymold: CMakeFiles/mymold.dir/link.txt
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --bold --progress-dir=/home/jjk/project/mold2/my_mold/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_7) "Linking C executable ../mymold"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --bold --progress-dir=/home/jjk/project/mold2/my_mold/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_9) "Linking C executable ../mymold"
 	$(CMAKE_COMMAND) -E cmake_link_script CMakeFiles/mymold.dir/link.txt --verbose=$(VERBOSE)
 
 # Rule to build all files generated by this target.

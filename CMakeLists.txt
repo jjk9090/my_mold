@@ -13,6 +13,8 @@ endif()
 file(GLOB SOURCES "${CMAKE_SOURCE_DIR}/*.c")
 
 add_executable(mymold
+    ${CMAKE_SOURCE_DIR}/arch-arm32.c
+    ${CMAKE_SOURCE_DIR}/thunks.c
     ${CMAKE_SOURCE_DIR}/input_sections.c
     ${CMAKE_SOURCE_DIR}/input_file 
     ${CMAKE_SOURCE_DIR}/output_chunks.c

@@ -15,8 +15,8 @@ typedef struct StringView{
     const char* data;
     size_t size;
 } StringView;
-
 #include "uthash.h"
+
 #include "new_vector.h"
 #include <fcntl.h>
 #include <unistd.h>
@@ -31,9 +31,8 @@ struct OutputSectionKey {
 typedef struct OutputSectionKey OutputSectionKey;
 
 #include "bigvector.h"
-#include "uthash.h"
 #include "config.h"
-#include "symbol.h"
+
 #include "mapped_file.h"
 // 定义上下文信息的结构体
 ARM32 target;
@@ -70,6 +69,7 @@ typedef struct
     ElfShdr **elf_sections;    
     int elf_sections_num;
     ElfSym **elf_syms;
+    int elf_syms_num;
     MappedFile *inputfile_mf;
     StringView symbol_strtab;
     vector local_syms;
@@ -134,6 +134,7 @@ typedef struct {
     u64 value;
 } SectionOrder;
 
+#include "symbol.h"
 #include "output_file.h"
 typedef enum {
     SEPARATE_LOADABLE_SEGMENTS,
@@ -141,7 +142,7 @@ typedef enum {
     NOSEPARATE_CODE,
 } SeparateCodeKind;
 
-struct Context{
+struct Context {
     char** cmdline_args;
     int num_args;
 
@@ -150,10 +151,10 @@ struct Context{
 
     struct {
         /* data */
-        Symbol *entry;
-        Symbol *fini;
-        Symbol *init;
-        Symbol **undefined;
+        ELFSymbol *entry;
+        ELFSymbol *fini;
+        ELFSymbol *init;
+        ELFSymbol **undefined;
         bool color_diagnostics;
         char *output;
         char *emulation;
@@ -166,9 +167,12 @@ struct Context{
         bool relocatable_merge_sections;
         bool gc_sections;
         bool eh_frame_hdr;
+        bool start_stop;
         vector section_order;
 
         SeparateCodeKind z_separate_code;
+        bool hash_style_sysv;
+        bool hash_style_gnu;
         bool z_defs;
         bool z_delete;
         bool z_dlopen;
@@ -190,11 +194,12 @@ struct Context{
         bool z_text;
     } arg;
 
+    i64 default_version;
     bool is_static;
     bool in_lib;
     i64 file_priority;
     // Symbol table
-    Symbol *symbol_map;
+    ELFSymbol *symbol_map;
     int map_size;
     // 其他成员变量的定义
     ObjectFile *internal_obj;
@@ -220,13 +225,54 @@ struct Context{
     EhFrameSection *eh_frame;
     ShstrtabSection *shstrtab;
     EhFrameHdrSection *eh_frame_hdr;
-    // DynstrSection *dynstr;
-    // HashSection *hash;
+    DynstrSection *dynstr;
+    HashSection *hash;
+    GnuHashSection *gnu_hash;
     // ShstrtabSection *shstrtab;
     PltSection *plt;
     PltGotSection *pltgot;
     SymtabSection *symtab;
+    VersymSection *versym;
+    VerneedSection *verneed;
+    RelroPaddingSection *relro_padding;
+    // Linker-synthesized symbols
+    ELFSymbol *_DYNAMIC;
+    ELFSymbol *_GLOBAL_OFFSET_TABLE_;
+    ELFSymbol *_PROCEDURE_LINKAGE_TABLE_;
+    ELFSymbol *_TLS_MODULE_BASE_;
+    ELFSymbol *__GNU_EH_FRAME_HDR;
+    ELFSymbol *__bss_start;
+    ELFSymbol *__dso_handle;
+    ELFSymbol *__ehdr_start;
+    ELFSymbol *__executable_start;
+    ELFSymbol *__exidx_end;
+    ELFSymbol *__exidx_start;
+    ELFSymbol *__fini_array_end;
+    ELFSymbol *__fini_array_start;
+    ELFSymbol *__global_pointer;
+    ELFSymbol *__init_array_end;
+    ELFSymbol *__init_array_start;
+    ELFSymbol *__preinit_array_end;
+    ELFSymbol *__preinit_array_start;
+    ELFSymbol *__rel_iplt_end;
+    ELFSymbol *__rel_iplt_start;
+    ELFSymbol *_edata;
+    ELFSymbol *_end;
+    ELFSymbol *_etext;
+    ELFSymbol *edata;
+    ELFSymbol *end;
+    ELFSymbol *etext;
 } ;
+
+typedef struct {
+    /* data */
+    i64 alignment;
+
+    OutputSection *output_section;
+    i64 offset;
+    // Symbol *
+    vector symbols;
+} Thunk;
 
 #include "filetype.h"
 #include "input_file.h"
@@ -239,7 +285,7 @@ static inline i64 get_shndx(ElfSym *esym) {
         return -1;
     return *esym->st_shndx.val;
 }
-
+static const StringView EMPTY_STRING_VIEW = {NULL, 0};
 char *mold_version;
 void create_internal_file(Context *ctx);
 void add_object_to_pool(ObjectFile **pool, int *size, ObjectFile *obj);
@@ -259,6 +305,13 @@ SectionFragment *merge_sec_insert(Context *ctx, StringView *data, u64 hash,
                          i64 p2align,MergedSection *sec);
 void file_resolve_section_pieces(Context *ctx,ObjectFile *file);
 void assign_offsets(Context *ctx,MergedSection *sec);
+void obj_resolve_symbols(Context *ctx,ObjectFile *obj);
+void add_synthetic_symbols (Context *ctx);
+void isec_scan_relocations(Context *ctx,ObjectFile *file,int i,InputSection *isec);
+void scan_relocations(Context *ctx);
+void compute_section_sizes(Context *ctx);
+void create_range_extension_thunks(Context *ctx,OutputSection *osec);
+void sort_output_sections(Context *ctx);
 // 获取输入input_section
 static inline ElfShdr *get_shdr(ObjectFile *file,int shndx) {
   if (shndx < file->inputfile.elf_sections_num)
@@ -277,10 +330,50 @@ static inline void ELFSym_set_frag(SectionFragment *frag,ELFSymbol *sym) {
     sym->origin = addr | TAG_FRAG;
 }
 
-inline ElfRel *get_rels(Context *ctx,ObjectFile *file,InputSection *sec) {
+static inline StringView get_rels(Context *ctx,ObjectFile *file,InputSection *sec) {
     if (sec->relsec_idx == -1)
-        return NULL;
-    // return get_data(ctx,file->elf_sections[sec->relsec_idx])
+        return EMPTY_STRING_VIEW;
+    return get_data(ctx,file->inputfile.elf_sections[sec->relsec_idx]);
+}
+
+static inline InputSection *get_section(ElfSym *esym,ObjectFile *obj) {
+    return obj->sections[get_shndx(esym)];
+}
+
+static inline ElfSym *esym(Inputefile *file,int sym_idx) {
+  return file->elf_syms[sym_idx];
+}
+
+static inline void set_input_section(InputSection *isec,ELFSymbol *sym) {
+    uintptr_t addr = (uintptr_t)isec;
+    assert((addr & TAG_MASK) == 0);
+    sym->origin = addr | TAG_ISEC;
+}
+
+static inline void set_output_section(Chunk *osec,ELFSymbol *sym) {
+    uintptr_t addr = (uintptr_t)osec;
+    assert((addr & TAG_MASK) == 0);
+    sym->origin = addr | TAG_OSEC;
+}
+
+static inline int is_alpha(char c) {
+    return c == '_' || ('a' <= c && c <= 'z') || ('A' <= c && c <= 'Z');
+}
+
+static inline int is_alnum(char c) {
+    return is_alpha(c) || ('0' <= c && c <= '9');
+}
+
+static inline bool is_c_identifier(const char* s) {
+    if (strlen(s) == 0)
+        return false;   
+
+    if (!is_alpha(s[0]))
+        return false;
+    for (size_t i = 1; i < strlen(s); i++)
+        if (!is_alnum(s[i]))
+            return false;
+    return true;
 }
 #endif  // 结束头文件保护
 

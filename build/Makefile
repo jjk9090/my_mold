@@ -123,6 +123,33 @@ mymold/fast:
 	$(MAKE) -f CMakeFiles/mymold.dir/build.make CMakeFiles/mymold.dir/build
 .PHONY : mymold/fast
 
+arch-arm32.o: arch-arm32.c.o
+
+.PHONY : arch-arm32.o
+
+# target to build an object file
+arch-arm32.c.o:
+	$(MAKE) -f CMakeFiles/mymold.dir/build.make CMakeFiles/mymold.dir/arch-arm32.c.o
+.PHONY : arch-arm32.c.o
+
+arch-arm32.i: arch-arm32.c.i
+
+.PHONY : arch-arm32.i
+
+# target to preprocess a source file
+arch-arm32.c.i:
+	$(MAKE) -f CMakeFiles/mymold.dir/build.make CMakeFiles/mymold.dir/arch-arm32.c.i
+.PHONY : arch-arm32.c.i
+
+arch-arm32.s: arch-arm32.c.s
+
+.PHONY : arch-arm32.s
+
+# target to generate assembly for a file
+arch-arm32.c.s:
+	$(MAKE) -f CMakeFiles/mymold.dir/build.make CMakeFiles/mymold.dir/arch-arm32.c.s
+.PHONY : arch-arm32.c.s
+
 input_file.o: input_file.c.o
 
 .PHONY : input_file.o
@@ -258,6 +285,33 @@ passes.c.s:
 	$(MAKE) -f CMakeFiles/mymold.dir/build.make CMakeFiles/mymold.dir/passes.c.s
 .PHONY : passes.c.s
 
+thunks.o: thunks.c.o
+
+.PHONY : thunks.o
+
+# target to build an object file
+thunks.c.o:
+	$(MAKE) -f CMakeFiles/mymold.dir/build.make CMakeFiles/mymold.dir/thunks.c.o
+.PHONY : thunks.c.o
+
+thunks.i: thunks.c.i
+
+.PHONY : thunks.i
+
+# target to preprocess a source file
+thunks.c.i:
+	$(MAKE) -f CMakeFiles/mymold.dir/build.make CMakeFiles/mymold.dir/thunks.c.i
+.PHONY : thunks.c.i
+
+thunks.s: thunks.c.s
+
+.PHONY : thunks.s
+
+# target to generate assembly for a file
+thunks.c.s:
+	$(MAKE) -f CMakeFiles/mymold.dir/build.make CMakeFiles/mymold.dir/thunks.c.s
+.PHONY : thunks.c.s
+
 xxhash.o: xxhash.c.o
 
 .PHONY : xxhash.o
@@ -294,6 +348,9 @@ help:
 	@echo "... rebuild_cache"
 	@echo "... edit_cache"
 	@echo "... mymold"
+	@echo "... arch-arm32.o"
+	@echo "... arch-arm32.i"
+	@echo "... arch-arm32.s"
 	@echo "... input_file.o"
 	@echo "... input_file.i"
 	@echo "... input_file.s"
@@ -309,6 +366,9 @@ help:
 	@echo "... passes.o"
 	@echo "... passes.i"
 	@echo "... passes.s"
+	@echo "... thunks.o"
+	@echo "... thunks.i"
+	@echo "... thunks.s"
 	@echo "... xxhash.o"
 	@echo "... xxhash.i"
 	@echo "... xxhash.s"

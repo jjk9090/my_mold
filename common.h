@@ -1,9 +1,9 @@
 #ifndef COMMON_H  // 头文件保护，防止重复包含
 #define COMMON_H
 #include "mold.h"
-static inline void push_back(Context* ctx, Symbol* value) {
+static inline void push_back(Context* ctx, ELFSymbol *value) {
     ctx->arg.undefined_count++;
-    Symbol** temp = (Symbol**)malloc(ctx->arg.undefined_count * sizeof(Symbol *));
+    ELFSymbol **temp = (ELFSymbol **)malloc(ctx->arg.undefined_count * sizeof(ELFSymbol *));
     if (temp == NULL) {
         // 处理内存分配失败的情况
         fprintf(stderr, "内存分配失败\n");

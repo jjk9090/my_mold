@@ -68,7 +68,11 @@
         "istream": "c",
         "ostream": "c",
         "stdexcept": "c",
-        "streambuf": "c"
+        "streambuf": "c",
+        "new_vector.h": "c",
+        "assert.h": "c",
+        "elf_symbol.h": "c",
+        "output_file.h": "c"
     },
     "C_Cpp.errorSquiggles": "enabled"
 }

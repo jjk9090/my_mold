@@ -4,11 +4,13 @@ set(CMAKE_DEPENDS_LANGUAGES
   )
 # The set of files for implicit dependencies of each language:
 set(CMAKE_DEPENDS_CHECK_C
+  "/home/jjk/project/mold2/my_mold/arch-arm32.c" "/home/jjk/project/mold2/my_mold/build/CMakeFiles/mymold.dir/arch-arm32.c.o"
   "/home/jjk/project/mold2/my_mold/input_file.c" "/home/jjk/project/mold2/my_mold/build/CMakeFiles/mymold.dir/input_file.c.o"
   "/home/jjk/project/mold2/my_mold/input_sections.c" "/home/jjk/project/mold2/my_mold/build/CMakeFiles/mymold.dir/input_sections.c.o"
   "/home/jjk/project/mold2/my_mold/main.c" "/home/jjk/project/mold2/my_mold/build/CMakeFiles/mymold.dir/main.c.o"
   "/home/jjk/project/mold2/my_mold/output_chunks.c" "/home/jjk/project/mold2/my_mold/build/CMakeFiles/mymold.dir/output_chunks.c.o"
   "/home/jjk/project/mold2/my_mold/passes.c" "/home/jjk/project/mold2/my_mold/build/CMakeFiles/mymold.dir/passes.c.o"
+  "/home/jjk/project/mold2/my_mold/thunks.c" "/home/jjk/project/mold2/my_mold/build/CMakeFiles/mymold.dir/thunks.c.o"
   "/home/jjk/project/mold2/my_mold/xxhash.c" "/home/jjk/project/mold2/my_mold/build/CMakeFiles/mymold.dir/xxhash.c.o"
   )
 set(CMAKE_C_COMPILER_ID "GNU")

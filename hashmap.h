@@ -1,24 +1,22 @@
 #ifndef HASHMAP_H
 #define HASHMAP_H
-
 #include "mold.h"
-static inline Symbol* insert_symbol(Context *ctx, char* name, const char* value) {
-    Symbol* symbol = (Symbol*)malloc(sizeof(Symbol));
-    strncpy(symbol->name, name, 49);
-    strncpy(symbol->value, value, 49);
-    HASH_ADD_STR(ctx->symbol_map, name, symbol);
-    return symbol;
+static inline ELFSymbol * insert_symbol(Context *ctx,char *nameptr, char *value/*u64 hash*/) {
+    // element->hh.hashv = hash; 
+    ELFSymbol *sym = (ELFSymbol *)malloc(sizeof(ELFSymbol));
+    sym->nameptr = value;
+    sym->namelen = strlen(value);
+    HASH_ADD(hh, ctx->symbol_map, nameptr, sizeof(char *), sym); // 添加元素
+    return sym;
 }
-
-
-static inline Symbol* get_symbol(Context *ctx,const char* name) {
-    Symbol* symbol = NULL;
+static inline ELFSymbol* get_symbol(Context *ctx,const char* name) {
+    ELFSymbol* symbol = NULL;
     HASH_FIND_STR(ctx->symbol_map, name, symbol);
     return symbol;
 }
 
 static inline void free_symbol_table(Context *ctx) {
-    Symbol* symbol, * tmp;
+    ELFSymbol *symbol, * tmp;
     HASH_ITER(hh, ctx->symbol_map, symbol, tmp) {
         HASH_DEL(ctx->symbol_map, symbol);
         free(symbol);

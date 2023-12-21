@@ -293,12 +293,9 @@ void initialize_symbols (Context *ctx,ObjectFile *obj) {
         ElfSym *esym = (ElfSym *)(elf_syms + i * 2);
         char *key = (char *)(symbol_strtab.data + *esym->st_name.val);
         char *name = key;
-        Symbol *symbol = insert_symbol(ctx,key,name);
-        ELFSymbol *new_elf_sym = (ELFSymbol *)malloc(sizeof(ELFSymbol));
-        sym_init(new_elf_sym);
-        new_elf_sym->nameptr = strdup(symbol->value);
-        new_elf_sym->namelen = strlen(symbol->value);
-        VectorAdd(&symbols,new_elf_sym,sizeof(ELFSymbol));
+        ELFSymbol *symbol = insert_symbol(ctx,key,name);
+        sym_init(symbol);
+        VectorAdd(&symbols,symbol,sizeof(ELFSymbol));
     }
     obj->inputfile.symbols = symbols;
 }
@@ -324,6 +321,29 @@ void parse(Context *ctx,ObjectFile *obj) {
     initialize_symbols(ctx,obj);
     // sort_relocations(ctx);
     // parse_ehframe(ctx);
+}
+
+static u64 get_sym_rank(ElfSym *esym, Inputefile *file, bool is_in_archive) {
+    if (is_common(esym)) {
+        assert(!file->is_dso);
+        return is_in_archive ? 6 : 5;
+    }
+
+    if (file->is_dso || is_in_archive)
+        return (esym->st_bind == STB_WEAK) ? 4 : 3;
+
+    if (esym->st_bind == STB_WEAK)
+        return 2;
+    return 1;
+}
+static u64 get_rank (Inputefile *file,ElfSym *esym, bool is_in_archive) {
+    return (get_sym_rank(esym,file,is_in_archive) << 24) + file->priority;
+}
+
+static u64 get_rank_single_sym(ELFSymbol *sym,i64 i) {
+    if (!sym->file)
+        return 7 << 24;
+    return get_rank(&(sym->file->inputfile), esym(&(sym->file->inputfile),i), !(&(sym->file->inputfile))->is_alive);
 }
 
 // 定义函数，用于创建一个智能指针，并初始化引用计数为 1
@@ -562,5 +582,50 @@ void file_resolve_section_pieces(Context *ctx,ObjectFile *file) {
             //     ElfRel *r = get_rels();
             // }
         }
+    }
+}
+
+void obj_resolve_symbols(Context *ctx,ObjectFile *obj) {
+  for (i64 i = obj->inputfile.first_global; i < obj->inputfile.elf_syms_num; i++) {
+    ELFSymbol *sym = obj->inputfile.symbols.data[i];
+    ElfSym *esym =  obj->inputfile.elf_syms[i];
+
+    if (is_undef(esym))
+      continue;
+
+    InputSection *isec = NULL;
+    if (!is_abs(esym) && !is_common(esym)) {
+      isec = get_section(esym,obj);
+      if (!isec || !isec->is_alive)
+        continue;
+    }
+
+    if (get_rank(&(obj->inputfile), esym, !obj->inputfile.is_alive) < get_rank_single_sym(sym,i)) {
+      sym->file = obj;
+      set_input_section(isec,sym);
+      sym->value = *esym->st_value.val;
+      sym->sym_idx = i;
+      sym->ver_idx = ctx->default_version;
+      sym->is_weak = is_weak(esym);
+    }
+  }
+}
+
+void obj_scan_relocations(Context *ctx,ObjectFile *file) {
+    for(int i = 0;;i++) {
+        if (file == NULL || file->sections == NULL)
+            break;
+        InputSection *isec = file->sections[i];
+        if (isec == NULL)
+            break;
+        if (isec && isec->is_alive && (*get_shdr(file,i)->sh_flags.val & SHF_ALLOC)) {
+            isec_scan_relocations(ctx,file,i,isec);
+        }
+    }
+}
+void scan_relocations(Context *ctx) {
+    for (int i = 0;i < ctx->objs.size;i++) {
+        ObjectFile *file = (ObjectFile *)ctx->objs.data[i];
+        obj_scan_relocations(ctx,file);
     }
 }

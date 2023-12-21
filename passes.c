@@ -1,7 +1,7 @@
 #include "mold.h"
 #include "xxhash.h"
 
-
+Context *global_ctx;
 
 char *get_output_name(Context *ctx, char *name, u64 flags) {
     if (ctx->arg.relocatable && !ctx->arg.relocatable_merge_sections)
@@ -84,9 +84,9 @@ void create_internal_file(Context *ctx) {
 
 
     VectorNew(&(ctx->internal_esyms), 1);
-    ElfSym *elfsym;
+    ElfSym *elfsym = (ElfSym *)malloc(sizeof(ElfSym));
 
-    ELFSymbol *sym;
+    ELFSymbol *sym = (ELFSymbol *)malloc(sizeof(ELFSymbol));
     sym_init(sym);
 
     VectorNew(&(obj->symbols), 1);
@@ -127,6 +127,12 @@ void mark_live_objects(Context *ctx) {
 }
 
 void do_resolve_symbols(Context *ctx) {
+    for(int i = 0;;i++) {
+        ObjectFile *file = (ObjectFile *)ctx->objs.data[i];
+        if (file == NULL)
+            break;
+        obj_resolve_symbols(ctx,file);
+    }
     mark_live_objects(ctx);
 
     // clear_symbols();
@@ -141,13 +147,9 @@ void resolve_symbols(Context *ctx) {
 }
 
 char* save_string(Context *ctx, char *str, int len) {
-    char *buf = (char *)malloc(len + 1);
-    if (buf != NULL) {
-        memcpy(buf, str, len);
-        buf[len] = '\0';
-        VectorNew(&(ctx->string_pool),1);
-        VectorAdd(&(ctx->string_pool),buf,len + 1);
-        return buf;
+    if (str) {
+        VectorAdd(&(ctx->string_pool),str,len);
+        return str;
     } else {
         return NULL;
     }
@@ -216,7 +218,8 @@ OutputPhdr *create_section_order_p(u32 sh_flags) {
     OutputPhdr *out_endr = (OutputPhdr *) malloc(sizeof(OutputPhdr));
     out_endr->chunk = (Chunk *)malloc(sizeof(Chunk));
     out_endr->chunk->name = strdup("PHDR");
-    *out_endr->chunk->shdr.sh_size.val = 1;
+    // *out_endr->chunk->shdr.sh_size.val = 1;
+    *out_endr->chunk->shdr.sh_flags.val = sh_flags;
     *out_endr->chunk->shdr.sh_addralign.val = sizeof(Word);
     return out_endr;
 }
@@ -320,7 +323,7 @@ DynsymSection *create_dynsym() {
     DynsymSection *dynsym = (DynsymSection *)malloc(sizeof(DynsymSection));
     dynsym->finalized = false;
     dynsym->chunk = (Chunk *)malloc(sizeof(Chunk));
-    dynsym->chunk->name =  strdup(".symtab");
+    dynsym->chunk->name =  strdup(".dynsym");
     *dynsym->chunk->shdr.sh_type.val = SHT_DYNSYM;
     *dynsym->chunk->shdr.sh_entsize.val = sizeof(ElfSym);
     *dynsym->chunk->shdr.sh_addralign.val = sizeof(Word);
@@ -358,6 +361,88 @@ EhFrameHdrSection *create_ehframehdr() {
     return ehframehdr;
 }
 
+HashSection *create_hash() {
+    HashSection *hash = (HashSection *)malloc(sizeof(HashSection));
+    hash->chunk = (Chunk *)malloc(sizeof(Chunk));
+    hash->chunk->name = strdup(".hash");
+    *hash->chunk->shdr.sh_type.val = SHT_HASH;
+    *hash->chunk->shdr.sh_flags.val = SHF_ALLOC;
+    *hash->chunk->shdr.sh_entsize.val = 4;
+    *hash->chunk->shdr.sh_addralign.val = 4;
+    return hash;
+}
+
+GnuHashSection *create_gnu_hash() {
+    GnuHashSection *gnu_hash = (GnuHashSection *)malloc(sizeof(GnuHashSection));
+    gnu_hash->chunk = (Chunk *)malloc(sizeof(Chunk));
+    gnu_hash->chunk->name = strdup(".gnu.hash");
+    // *gnu_hash->chunk->shdr.sh_type.val = SHT_GNU_HASH;
+    gnu_hash->chunk->shdr.sh_type.val[0] = (SHT_GNU_HASH >> 24) & 0xFF;
+    gnu_hash->chunk->shdr.sh_type.val[1] = (SHT_GNU_HASH >> 16) & 0xFF;
+    gnu_hash->chunk->shdr.sh_type.val[2] = (SHT_GNU_HASH >> 8) & 0xFF;
+    gnu_hash->chunk->shdr.sh_type.val[3] = SHT_GNU_HASH & 0xFF;
+    *gnu_hash->chunk->shdr.sh_flags.val = SHF_ALLOC;
+    *gnu_hash->chunk->shdr.sh_addralign.val = sizeof(Word);
+    gnu_hash->BLOOM_SHIFT = 26;
+    gnu_hash->HEADER_SIZE = 16;
+    gnu_hash->LOAD_FACTOR = 8;
+    gnu_hash->num_bloom = 1;
+    gnu_hash->num_buckets = -1;
+    return gnu_hash;
+}
+
+DynstrSection *create_dynstr() {
+    DynstrSection *dynstr = (DynstrSection *)malloc(sizeof(DynstrSection));
+    dynstr->chunk = (Chunk *)malloc(sizeof(Chunk));
+    dynstr->chunk->name = strdup(".dynstr");
+    *dynstr->chunk->shdr.sh_type.val = SHT_STRTAB;
+    *dynstr->chunk->shdr.sh_flags.val = SHF_ALLOC;
+    dynstr->dynsym_offset = -1;
+    return dynstr;
+}
+
+VersymSection *create_gnu_version() {
+    VersymSection *gnu_version = (VersymSection *)malloc(sizeof(VersymSection));
+    gnu_version->chunk = (Chunk *)malloc(sizeof(Chunk));
+    gnu_version->chunk->name = strdup(".gnu.version");
+    // *gnu_version->chunk->shdr.sh_type.val = SHT_GNU_VERSYM;
+    gnu_version->chunk->shdr.sh_type.val[0] = (SHT_GNU_VERSYM >> 24) & 0xFF;
+    gnu_version->chunk->shdr.sh_type.val[1] = (SHT_GNU_VERSYM >> 16) & 0xFF;
+    gnu_version->chunk->shdr.sh_type.val[2] = (SHT_GNU_VERSYM >> 8) & 0xFF;
+    gnu_version->chunk->shdr.sh_type.val[3] = SHT_GNU_VERSYM & 0xFF;
+    *gnu_version->chunk->shdr.sh_flags.val = SHF_ALLOC;
+    *gnu_version->chunk->shdr.sh_entsize.val = 2;
+    *gnu_version->chunk->shdr.sh_addralign.val = 2;
+    VectorNew(&(gnu_version->contents),1);
+    return gnu_version;
+}
+
+VerneedSection *create_verneed() {
+    VerneedSection *verneed = (VerneedSection *)malloc(sizeof(VerneedSection));
+    verneed->chunk = (Chunk *)malloc(sizeof(Chunk));
+    verneed->chunk->name = strdup(".gnu.version_r");
+    // *verneed->chunk->shdr.sh_type.val = SHT_GNU_VERNEED;
+    verneed->chunk->shdr.sh_type.val[0] = (SHT_GNU_VERNEED >> 24) & 0xFF;
+    verneed->chunk->shdr.sh_type.val[1] = (SHT_GNU_VERNEED >> 16) & 0xFF;
+    verneed->chunk->shdr.sh_type.val[2] = (SHT_GNU_VERNEED >> 8) & 0xFF;
+    verneed->chunk->shdr.sh_type.val[3] = SHT_GNU_VERNEED & 0xFF;
+    *verneed->chunk->shdr.sh_flags.val = SHF_ALLOC;
+    *verneed->chunk->shdr.sh_addralign.val = sizeof(Word);
+    VectorNew(&(verneed->contents),1);
+    return verneed;
+}
+
+RelroPaddingSection *create_relropadding() {
+    RelroPaddingSection *relro = (RelroPaddingSection *)malloc(sizeof(RelroPaddingSection));
+    relro->chunk = (Chunk *)malloc(sizeof(Chunk));
+    relro->chunk->name = strdup(".relro_padding");
+    relro->chunk->is_relro = true;
+    *relro->chunk->shdr.sh_type.val = SHT_NOBITS;
+    *relro->chunk->shdr.sh_flags.val = SHF_ALLOC | SHF_WRITE;
+    *relro->chunk->shdr.sh_addralign.val = 1;
+    *relro->chunk->shdr.sh_size.val = 1;
+    return relro;
+}
 void create_synthetic_sections(Context *ctx) {
     if (ctx->arg.section_order.size == 0 || sec_order_find(ctx,"EHDR")) {
         ctx->ehdr = create_section_order_e(SHF_ALLOC);
@@ -403,13 +488,16 @@ void create_synthetic_sections(Context *ctx) {
 
     ctx->dynsym = create_dynsym();
     VectorAdd(&(ctx->chunks),ctx->dynsym->chunk,sizeof(Chunk *));
+    
+    ctx->dynstr = create_dynstr();
+    VectorAdd(&(ctx->chunks),ctx->dynstr->chunk,sizeof(Chunk *));
 
     ctx->eh_frame = create_enframe();
     VectorAdd(&(ctx->chunks),ctx->eh_frame->chunk,sizeof(Chunk *));
 
     if (ctx->shdr) {
         ctx->shstrtab = create_shstrtab();
-        VectorAdd(&(ctx->chunks),ctx->shdr->chunk,sizeof(Chunk *));
+        VectorAdd(&(ctx->chunks),ctx->shstrtab->chunk,sizeof(Chunk *));
     }
     if (ctx->arg.eh_frame_hdr) {
         ctx->eh_frame_hdr = create_ehframehdr();
@@ -419,6 +507,25 @@ void create_synthetic_sections(Context *ctx) {
         ctx->arg.z_separate_code != SEPARATE_LOADABLE_SEGMENTS) {
 
     }
+    if (ctx->arg.hash_style_sysv) {
+        ctx->hash = create_hash();
+        VectorAdd(&(ctx->chunks),ctx->hash->chunk,sizeof(Chunk *));
+    }
+        
+    if (ctx->arg.hash_style_gnu) {
+        ctx->gnu_hash = create_gnu_hash();
+        VectorAdd(&(ctx->chunks),ctx->gnu_hash->chunk,sizeof(Chunk *));
+    }
+    if (ctx->arg.z_relro && ctx->arg.section_order.size == 0 &&
+        ctx->arg.z_separate_code != SEPARATE_LOADABLE_SEGMENTS) {
+        ctx->relro_padding = create_relropadding();
+        VectorAdd(&(ctx->chunks),ctx->relro_padding->chunk,sizeof(Chunk *));
+    }
+
+    ctx->versym = create_gnu_version();
+    VectorAdd(&(ctx->chunks),ctx->versym->chunk,sizeof(Chunk *));
+    ctx->verneed = create_verneed();
+    VectorAdd(&(ctx->chunks),ctx->verneed->chunk,sizeof(Chunk *));
 }
 
 OutputSection *create_a_output_sections(Context *ctx,char *name,u32 type, u64 flags) {
@@ -427,13 +534,19 @@ OutputSection *create_a_output_sections(Context *ctx,char *name,u32 type, u64 fl
     output_section->chunk->name = strdup(name);
     *output_section->chunk->shdr.sh_type.val = type;
     *output_section->chunk->shdr.sh_flags.val = flags & ~SHF_MERGE & ~SHF_STRINGS;
+    output_section->chunk->shndx = 0;
+    output_section->chunk->is_relro = false;
+    output_section->chunk->local_symtab_idx = 0;
+    output_section->chunk->num_local_symtab = 0;
+    output_section->chunk->strtab_size = 0;
+    output_section->chunk->strtab_offset = 0;
     return output_section;
 }
 
-// 比较函数，用于排序
+// 比较函数，用于排序 0x555555578150
 int compareChunks(const void* a, const void* b) {
-    Chunk* chunkA = (Chunk* )a;
-    Chunk* chunkB = (Chunk* )b;
+    Chunk* chunkA = *(Chunk**)a;
+    Chunk* chunkB = *(Chunk**)b;
     if (chunkA->name && chunkB->name) {
         // 按照指定的排序规则进行比较
         int nameComparison = strcmp(chunkA->name, chunkB->name);
@@ -444,15 +557,16 @@ int compareChunks(const void* a, const void* b) {
     
     if (*chunkA->shdr.sh_type.val <  *chunkB->shdr.sh_type.val) 
         return -1;
-    else 
+    else if (*chunkA->shdr.sh_type.val >  *chunkB->shdr.sh_type.val)
         return 1;
     if (*chunkA->shdr.sh_flags.val < *chunkB->shdr.sh_flags.val) 
         return -1;
-    else 
+    else if (*chunkA->shdr.sh_flags.val > *chunkB->shdr.sh_flags.val) 
         return 1;
     
     return 0;
 }
+
 // 创造输出段 Create output sections for input sections.
 void create_output_sections(Context *ctx) {
     i64 size = ctx->osec_pool.size;
@@ -475,15 +589,16 @@ void create_output_sections(Context *ctx) {
             if (ctx->arg.relocatable && (*shdr->sh_flags.val & SHF_GROUP)) {
                 OutputSection *osec = create_a_output_sections(ctx, get_name(file,j), *shdr->sh_type.val, *shdr->sh_flags.val);
                 isec->output_section = osec;
-                VectorAdd(&(ctx->osec_pool),osec,sizeof(OutputSection));
+                VectorAdd(&(ctx->osec_pool),osec,sizeof(OutputSection *));
                 continue;
             }
             OutputSectionKey *key = get_output_section_key(ctx, isec,file,j);
             OutputSection *osec = create_a_output_sections(ctx, key->name, key->type, key->flags);
                 
             out_sec_insert_element(output_section_map,key,osec);
-            VectorAdd(&(ctx->osec_pool),osec,sizeof(OutputSection));
+            VectorAdd(&(ctx->osec_pool),osec,sizeof(OutputSection *));
             isec->output_section = osec;
+            printf("wait ...\n");
         }
     }
     // Add input sections to output sections
@@ -491,7 +606,11 @@ void create_output_sections(Context *ctx) {
     VectorNew(&chunks,1);
     for(int i = 0;i < ctx->osec_pool.size;i++) {
         OutputSection *temp = ctx->osec_pool.data[i];
+        temp->chunk->is_outsec = 1;
+        temp->chunk->outsec = (OutputSection *)malloc(sizeof(OutputSection));
+        temp->chunk->outsec = temp;
         VectorAdd(&chunks,temp->chunk,sizeof(Chunk *));
+        // VectorAdd(&(ctx->chunks),temp->chunk,sizeof(Chunk *));
     }
 
     for (int i = 0;;i++) {
@@ -505,10 +624,11 @@ void create_output_sections(Context *ctx) {
             InputSection *isec = file->sections[j];
             if (isec == NULL)
                 break;
-            isec->output_section = (OutputSection *)malloc(sizeof(OutputSection));
-            VectorNew(&(isec->output_section->member),1);
-            if (isec && isec->is_alive)
+            // isec->output_section = (OutputSection *)malloc(sizeof(OutputSection));
+            if (isec && isec->is_alive && isec->file != NULL) {
+                VectorNew(&(isec->output_section->member),1);
                 VectorAdd(&(isec->output_section->member),isec,sizeof(InputSection *));
+            }
         }    
     }
 
@@ -517,23 +637,29 @@ void create_output_sections(Context *ctx) {
         MergedSection *osec = ctx->merged_sections.data[i];
         if (*osec->chunk->shdr.sh_size.val) {
             VectorAdd(&chunks,osec->chunk,sizeof(Chunk *));
+            // VectorAdd(&(ctx->chunks),osec->chunk,sizeof(Chunk *));
         }
     }
     
     // 使用 qsort 函数对chunks进行排序
-    Chunk temp1[chunks.size];
+    Chunk *temp2[chunks.size];
     for (int i = 0; i < chunks.size; i++) {
-        temp1[i] = *(Chunk *)(chunks.data[i]);
+        temp2[i] = (Chunk *)(chunks.data[i]);
     }
-    
-    qsort(temp1, chunks.size, sizeof(Chunk), compareChunks);
-    
+    qsort(temp2, chunks.size, sizeof(Chunk *), compareChunks);
     for (int i = 0; i < chunks.size; i++) {
         // 获取当前元素
-        Chunk* currentElement = &temp1[i];
+        Chunk* currentElement = temp2[i];
         printf("name: %s\n", currentElement->name);
         // 将chunks加入ctx->chunks
-        VectorAdd(&(ctx->chunks),currentElement,(sizeof(Chunk *)));
+        // VectorAdd(&(ctx->chunks),ctx->phdr->chunk,sizeof(Chunk *));
+        VectorAdd(&(ctx->chunks),temp2[i],(sizeof(Chunk *)));
+    } 
+    
+    for (int i = 0; i < ctx->chunks.size; i++) {
+        // 获取当前元素
+        Chunk* currentElement = ctx->chunks.data[i];
+        printf("name: %s\n", currentElement->name);
     } 
 }
 
@@ -551,3 +677,333 @@ void resolve_section_pieces(Context *ctx) {
         file_resolve_section_pieces(ctx,file);
     }
 }
+
+ELFSymbol *add_sym(Context *ctx,ObjectFile *obj,char *name) {
+    u32 type = STT_NOTYPE;
+    ElfSym *esym = (ElfSym *)malloc(sizeof(ElfSym));
+    esym->st_type = type;
+    // *esym->st_shndx.val = SHN_ABS;
+    esym->st_shndx.val[0] = (SHN_ABS >> 8) & 0xFF;
+    esym->st_shndx.val[1] = SHN_ABS & 0xFF;
+    esym->st_bind = STB_GLOBAL;
+    esym->st_visibility = STV_HIDDEN;
+    VectorAdd(&(ctx->internal_esyms),esym,sizeof(ElfSym *));
+    ELFSymbol *sym = insert_symbol(ctx,name,name);
+    sym->value =  0xdeadbeef; // unique dummy value
+    VectorAdd(&(obj->symbols),sym,sizeof(ELFSymbol *));
+    return sym;
+}
+
+char* get_start_stop_name(Context* ctx, Chunk* chunk) {
+    if ((*chunk->shdr.sh_flags.val & SHF_ALLOC) && strlen(chunk->name) > 0) {
+        if (is_c_identifier(chunk->name)) {
+            char* result = (char*)malloc(strlen(chunk->name) + 1);
+            strcpy(result, chunk->name);
+            return result;
+        }
+
+        if (ctx->arg.start_stop) {
+            char* s = (char*)malloc(strlen(chunk->name) + 1);
+            strcpy(s, chunk->name);
+            if (s[0] == '.')
+                memmove(s, s + 1, strlen(s));
+            for (size_t i = 0; i < strlen(s); i++) {
+                if (!is_alnum(s[i]))
+                    s[i] = '_';
+            }
+            return s;
+        }
+    }
+
+    return NULL;
+}
+
+// 增加合成符号
+void add_synthetic_symbols (Context *ctx) {
+    ObjectFile *obj = ctx->internal_obj;
+    ctx->__ehdr_start = add_sym(ctx,obj,"__ehdr_start");
+    ctx->__init_array_start = add_sym(ctx,obj,"__init_array_start");
+
+    ctx->__init_array_end = add_sym(ctx,obj,"__init_array_end");
+    ctx->__fini_array_start = add_sym(ctx,obj,"__fini_array_start");
+    ctx->__fini_array_end = add_sym(ctx,obj,"__fini_array_end");
+    ctx->__preinit_array_start = add_sym(ctx,obj,"__preinit_array_start");
+    ctx->__preinit_array_end = add_sym(ctx,obj,"__preinit_array_end");
+    ctx->_DYNAMIC = add_sym(ctx,obj,"_DYNAMIC");
+    ctx->_GLOBAL_OFFSET_TABLE_ = add_sym(ctx,obj,"_GLOBAL_OFFSET_TABLE_");
+    ctx->_PROCEDURE_LINKAGE_TABLE_ = add_sym(ctx,obj,"_PROCEDURE_LINKAGE_TABLE_");
+    ctx->__bss_start = add_sym(ctx,obj,"__bss_start");
+    ctx->_end = add_sym(ctx,obj,"_end");
+    ctx->_etext = add_sym(ctx,obj,"_etext");
+    ctx->_edata = add_sym(ctx,obj,"_edata");
+    ctx->__executable_start = add_sym(ctx,obj,"__executable_start");
+
+    ctx->__rel_iplt_start =
+        add_sym(ctx,obj,target.is_rela ? "__rela_iplt_start" : "__rel_iplt_start");
+    ctx->__rel_iplt_end =
+        add_sym(ctx,obj,target.is_rela ? "__rela_iplt_end" : "__rel_iplt_end");
+
+    if (ctx->arg.eh_frame_hdr)
+        ctx->__GNU_EH_FRAME_HDR = add_sym(ctx,obj,"__GNU_EH_FRAME_HDR");
+    
+    if (!insert_symbol(ctx, "end","end")->file)
+        ctx->end = add_sym(ctx,obj,"end");
+    if (!insert_symbol(ctx, "etext","etext")->file)
+        ctx->etext = add_sym(ctx,obj,"etext");
+    if (!insert_symbol(ctx, "edata","edata")->file)
+        ctx->edata = add_sym(ctx,obj,"edata");
+    if (!insert_symbol(ctx, "__dso_handle","__dso_handle")->file)
+        ctx->__dso_handle = add_sym(ctx,obj,"__dso_handle");
+    
+    if (!strcmp(target.target_name,"arm32")) {
+        ctx->__exidx_start = add_sym(ctx,obj,"__exidx_start");
+        ctx->__exidx_end = add_sym(ctx,obj,"__exidx_end");
+    }
+    
+    for (int i = 0; i < ctx->chunks.size; i++) {        
+        Chunk *chunk = (Chunk *)ctx->chunks.data[i];
+        
+        char *right = get_start_stop_name(ctx,chunk);
+        if (right) {
+            char temp[60];
+            strcpy(temp, "__start_");
+            strcat(temp, right);
+            char *s1 = strdup(temp);
+            add_sym(ctx, obj, s1);
+
+            strcpy(temp, "__stop_");
+            strcat(temp, right);
+            char *s2 = strdup(temp);
+            add_sym(ctx, obj, s2);
+        }
+    }
+
+    int size = ctx->internal_esyms.size;
+    obj->inputfile.elf_syms = (ElfSym **)malloc(sizeof(ElfSym *) * size);
+    // obj->inputfile.elf_syms = ctx->internal_esyms;
+    for(int i = 0;i < size;i++) {
+        ElfSym *temp = (ElfSym *)ctx->internal_esyms.data[i];
+        obj->inputfile.elf_syms[i] = (ElfSym *)ctx->internal_esyms.data[i];
+    }
+    resize(&(obj->has_symver),size - 1);
+    obj_resolve_symbols(ctx,obj);
+
+    // Make all synthetic symbols relative ones by associating them to
+    // a dummy output section.
+    for(int i = 0;i < obj->symbols.size;i++) {
+        ELFSymbol *sym = (ELFSymbol *)(obj->symbols.data[i]);
+        if (sym->file == obj) 
+            set_output_section(ctx->symtab->chunk,sym);
+    }
+}
+
+static vector split(vector input, i64 unit) {
+    vector vec;
+    VectorNew(&vec, 1);
+    void** data = (void**)input.data;
+    int remaining = input.size;
+    while (remaining >= unit) {
+        vector tmp;
+        VectorNew(&tmp, unit);
+        memcpy(tmp.data, data, unit * sizeof(void*));
+        VectorAdd(&vec, &tmp, sizeof(vector*));
+        data += unit;
+        remaining -= unit;
+    }
+    if (remaining > 0) {
+        vector tmp;
+        VectorNew(&tmp, remaining);
+        memcpy(tmp.data, data, remaining * sizeof(void*));
+        VectorAdd(&vec, &tmp, sizeof(vector*));
+    }
+    return vec;
+}
+
+typedef struct {
+    i64 size;
+    i64 p2align;
+    i64 offset;
+    vector members;
+} Group;
+
+void compute_section_sizes(Context *ctx) {
+    for(int i = 0;i<ctx->chunks.size;i++) {
+        OutputSection *osec = ((Chunk *)ctx->chunks.data[i])->outsec;
+        if (!osec)
+            continue;
+        if (target.thunk_size) {
+            if ((*osec->chunk->shdr.sh_flags.val & SHF_EXECINSTR) || !ctx->arg.relocatable) {
+                continue;
+            }
+        }
+        vector groups;
+        i64 group_size = 10000;
+        VectorNew(&groups,1);
+        vector split_result = split(osec->member, group_size);
+        for (int j = 0;j < split_result.size;j++) {
+            vector *span = (vector *)split_result.data[i];
+            Group group = {.members = *span};
+            VectorAdd(&groups,&group,sizeof(Group *));
+        }
+
+        for(int i = 0;i < groups.size;i++) {
+            Group *group = (Group *)groups.data[i];
+            for(int j = 0;;j++) {
+                InputSection *isec = (InputSection *)group->members.data[i];
+                group->size = align_to(group->size, 1 << isec->p2align) + isec->sh_size;
+                group->p2align = group->p2align > isec->p2align ? group->p2align : isec->p2align;
+            }           
+        }
+
+        ElfShdr *shdr = &(osec->chunk->shdr);
+        *shdr->sh_size.val = 0;
+
+        for (i64 i = 0; i < groups.size; i++) {
+            Group *group = (Group *)groups.data[i];
+            *shdr->sh_size.val = align_to(*shdr->sh_size.val, 1 << group->p2align);
+            group->offset = *shdr->sh_size.val;
+            *shdr->sh_size.val += group->size;
+            *shdr->sh_addralign.val = *shdr->sh_addralign.val > 1 << group->p2align ? *shdr->sh_addralign.val : 1 << group->p2align;
+        }
+
+        // Assign offsets to input sections.
+        for(int i = 0;i < groups.size;i++) {
+            Group *group = (Group *)groups.data[i];
+            i64 offset = group->offset;
+            for(int j = 0;j < group->members.size;j++) {
+                InputSection *isec = group->members.data[i];
+                offset = align_to(offset,1 << isec->p2align);
+                isec->offset = offset;
+                offset += isec->sh_size;
+            }
+        }
+    }
+
+    // 对ARM处理
+    if(target.thunk_size) {
+        if (!ctx->arg.relocatable) {
+            for (int i = 0;i < ctx->chunks.size;i++) {
+                Chunk *chunk = ctx->chunks.data[i];
+                OutputSection *osec = chunk->outsec;
+                
+                if (!osec)
+                    continue;
+                if (*osec->chunk->shdr.sh_flags.val & SHF_EXECINSTR)
+                    create_range_extension_thunks(ctx,osec);
+            }
+        }
+    }
+}
+
+i64 get_rank1(Context *ctx,Chunk *chunk) {
+    u64 type = *chunk->shdr.sh_type.val;
+    u64 flags = *chunk->shdr.sh_flags.val;
+    if (chunk == ctx->ehdr->chunk)
+        return 0;
+    if (chunk == ctx->phdr->chunk)
+        return 1;
+    if (type == SHT_NOTE && (flags & SHF_ALLOC))
+        return 3;
+    if (chunk == ctx->hash->chunk)
+        return 4;
+    if (chunk == ctx->gnu_hash->chunk)
+        return 5;
+    if (chunk == ctx->dynsym->chunk)
+        return 6;
+    if (chunk == ctx->dynstr->chunk)
+        return 7;
+    if (chunk == ctx->versym->chunk)
+        return 8;
+    if (chunk == ctx->verneed->chunk)
+        return 9;
+    if (chunk == ctx->reldyn->chunk)
+        return 10;
+    if (chunk == ctx->relplt->chunk)
+        return 11;
+    if (chunk == ctx->shdr->chunk)
+        return INT32_MAX - 1;
+
+    bool alloc = (flags & SHF_ALLOC);
+    bool writable = (flags & SHF_WRITE);
+    bool exec = (flags & SHF_EXECINSTR);
+    bool tls = (flags & SHF_TLS);
+    bool relro = chunk->is_relro;
+    bool is_bss = (type == SHT_NOBITS);
+
+    return (1 << 10) | (!alloc << 9) | (writable << 8) | (exec << 7) |
+           (!tls << 6) | (!relro << 5) | (is_bss << 4);
+}
+
+i64 get_rank2(Context *ctx,Chunk *chunk) {
+    ElfShdr *shdr = &(chunk->shdr);
+    if (*shdr->sh_type.val == SHT_NOTE)
+        return -(*shdr->sh_addralign.val);
+    if (chunk == ctx->got->chunk)
+        return 2;
+    if (chunk->name && !strcmp(chunk->name,".toc"))
+        return 3;
+    if (chunk->name && !strcmp(chunk->name,".alpha_got"))
+        return 4;
+
+    if (*shdr->sh_flags.val & SHF_MERGE) {
+        if (*shdr->sh_flags.val & SHF_STRINGS) 
+            return (5LL << 32) | *shdr->sh_entsize.val;
+        return (6LL << 32) | *shdr->sh_entsize.val;
+    }
+
+    if (chunk == ctx->relro_padding->chunk)
+        return INT64_MAX;
+    return 0;
+}
+
+int compare_chunks_out(const void* a, const void* b) {
+    Chunk* chunk_a = *(Chunk**)a;
+    Chunk* chunk_b = *(Chunk**)b;
+    
+    u64 rank1_a = get_rank1(global_ctx,chunk_a);
+    u64 rank1_b = get_rank1(global_ctx,chunk_b);
+    if (rank1_a < rank1_b) 
+        return -1;
+    else if (rank1_a > rank1_b)
+        return 1;    
+    
+    u64 rank2_a = get_rank2(global_ctx,chunk_a);
+    u64 rank2_b = get_rank2(global_ctx,chunk_b);
+    if (rank2_a < rank2_b) 
+        return -1;
+    else if (rank2_a > rank2_b)
+        return 1;
+    
+    if (strcmp((chunk_a)->name, (chunk_b)->name) < 0) 
+        return -1;
+    else if(strcmp((chunk_a)->name, (chunk_b)->name) > 0)
+        return 1;
+    return 0;
+}
+
+void sort_output_sections_regular(Context *ctx) {
+    global_ctx = ctx;
+    Chunk *temp1[ctx->chunks.size];
+    for (int i = 0; i < ctx->chunks.size; i++) {
+        temp1[i] = (Chunk *)(ctx->chunks.data[i]);
+    }
+    qsort(temp1, ctx->chunks.size, sizeof(Chunk *), compare_chunks_out);
+    // 验证
+    for (int i = 0; i < ctx->chunks.size; i++) {
+        // 获取当前元素
+        Chunk* currentElement = temp1[i];
+        printf("finalname: %s\n", currentElement->name);
+    } 
+}
+
+void sort_output_sections(Context *ctx) {
+    if (ctx->arg.section_order.size == 0)
+        sort_output_sections_regular(ctx);
+}
+
+
+
+
+
+
+

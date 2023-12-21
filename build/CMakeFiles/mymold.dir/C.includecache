@@ -89,14 +89,12 @@ errno.h
 /home/jjk/project/mold2/my_mold/elf.h
 bigvector.h
 /home/jjk/project/mold2/my_mold/bigvector.h
-uthash.h
-/home/jjk/project/mold2/my_mold/uthash.h
 config.h
 /home/jjk/project/mold2/my_mold/config.h
-symbol.h
-/home/jjk/project/mold2/my_mold/symbol.h
 mapped_file.h
 /home/jjk/project/mold2/my_mold/mapped_file.h
+symbol.h
+/home/jjk/project/mold2/my_mold/symbol.h
 output_file.h
 /home/jjk/project/mold2/my_mold/output_file.h
 filetype.h

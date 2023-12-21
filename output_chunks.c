@@ -67,7 +67,7 @@ SectionFragment *merge_sec_insert(Context *ctx, StringView *data, u64 hash,
     frag->p2align = 0;
     frag->offset = -1;
     bool inserted;
-    merger_sec_insert_element(sec,data->data,frag/*,hash*/);
+    merger_sec_insert_element(sec,(char *)data->data,frag/*,hash*/);
     //   update_maximum(frag->p2align, p2align);
     return frag;
 }

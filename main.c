@@ -141,7 +141,7 @@ int main(int argc, char **argv) {
     mold_version = get_mold_version();
     // 创建保存上下文信息的结构体
     Context ctx;
-    ctx.symbol_map = NULL;
+    (&ctx)->symbol_map = NULL;
     insert_symbol(&ctx,"_start", "_start");
     insert_symbol(&ctx,"_fini","_fini");
     insert_symbol(&ctx,"_init","_init");
@@ -154,6 +154,7 @@ int main(int argc, char **argv) {
     // 解析拓展命令行参数
     ctx.cmdline_args = expand_response_files(&ctx,argv);
     ctx.file_priority = 10000;
+    ctx.default_version = VER_NDX_UNSPECIFIED;
     ctx.arg.relocatable = false;
     ctx.arg.oformat_binary = false;
     ctx.arg.relocatable_merge_sections = false;
@@ -162,11 +163,15 @@ int main(int argc, char **argv) {
     ctx.arg.z_now = false;
     ctx.arg.eh_frame_hdr = true;
     ctx.arg.z_separate_code =  NOSEPARATE_CODE;
-
+    ctx.arg.start_stop = false;
+    ctx.arg.hash_style_sysv = true;
+    ctx.arg.hash_style_gnu = true;
+    ctx.arg.z_relro = true;
     ctx.merged_sections_count = 0;
     VectorNew(&(ctx.arg.section_order),1);
     VectorNew(&(ctx.chunks),1);
     VectorNew(&(ctx.osec_pool),1);
+    VectorNew(&(ctx.string_pool),1);
     // 使用展开后的参数列表
     // printf("Expanded arguments:\n");
     // for (int i = 0; ctx.cmdline_args[i] != NULL; i++) {
@@ -203,6 +208,18 @@ int main(int argc, char **argv) {
 
     // 创造输出段 Bin input sections into output sections.
     create_output_sections(&ctx);
+
+    // 添加一些synthetic的符号
+    add_synthetic_symbols(&ctx);
+
+    // 扫描重定位
+    scan_relocations(&ctx);
+
+    // Compute sizes of output sections while assigning offsets
+    // within an output section to input sections.
+    compute_section_sizes(&ctx);
+
+    sort_output_sections(&ctx);
     // 释放动态分配的内存
     free_vec(ctx.cmdline_args);
     return 0;

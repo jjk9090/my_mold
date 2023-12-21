@@ -10,8 +10,10 @@ typedef struct Chunk {
     i64 strtab_size;
     i64 strtab_offset;
 
-  // Offset in .rel.dyn
-  i64 reldyn_offset ;
+    // Offset in .rel.dyn
+    i64 reldyn_offset ;
+    OutputSection *outsec;
+    bool is_outsec;
 } Chunk;
 
 typedef struct {
@@ -133,6 +135,49 @@ struct RelocS{
     // i64
     vector offsets;
 };
+
+typedef struct {
+    /* data */
+    Chunk *chunk;  
+} HashSection;
+
+typedef struct {
+    /* data */
+    Chunk *chunk;
+    i64 LOAD_FACTOR;
+    i64 HEADER_SIZE;
+    i64 BLOOM_SHIFT;
+    u32 num_buckets;
+    u32 num_bloom;
+} GnuHashSection;
+
+typedef struct {
+    /* data */
+    Chunk *chunk;
+    i64 dynsym_offset;
+} DynstrSection;
+
+typedef struct {
+    /* data */
+    Chunk *chunk;
+    // U16
+    vector contents;
+} VersymSection;
+
+typedef struct {
+    Chunk *chunk;
+    // u8
+    vector contents;
+} VerneedSection;
+
+typedef struct {
+    /* data */
+    Chunk *chunk;
+} RelroPaddingSection;
+
+
+
+
 
 
 

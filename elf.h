@@ -257,6 +257,16 @@ enum {
   STB_GNU_UNIQUE = 10,
 };
 
+enum {
+  STV_DEFAULT = 0,
+  STV_INTERNAL = 1,
+  STV_HIDDEN = 2,
+  STV_PROTECTED = 3,
+};
+enum {
+    R_NONE = 0,
+};
+
 typedef struct  {
     char *target_name;
     bool is_64;
