@@ -20,8 +20,8 @@ StringView get_string(Context *ctx, ElfShdr *shdr) {
     result.size = (size_t)(end - begin);
     return result;
 }
-// 获取elf文件类型
 
+// 获取elf文件类型
 char *get_elf_type (u8 *buf) {
     bool is_le = (((ElfEhdr *)buf)->e_ident[EI_DATA] == ELFDATA2LSB);
     bool is_64;
@@ -68,7 +68,6 @@ char *get_elf_type (u8 *buf) {
             return "";
     }
 }
-
 
 char *get_machine_type(Context *ctx,MappedFile *mf) {
     StringView data = get_contents(mf);
@@ -117,6 +116,7 @@ void read_file(Context *ctx,MappedFile *mf) {
             return;
     }
 }
+
 static void read_input_files (Context *ctx,char **args) {
     ctx->is_static = ctx->arg.is_static;
     while (*args != NULL)  {
@@ -136,6 +136,13 @@ char *get_mold_version() {
 
     sprintf(versionString, "%s%s (%s; compatible with GNU ld)", name, MOLD_VERSION, mold_git_hash);
     return versionString;
+}
+
+void init_context(Context *ctx) {
+    VectorNew(&(ctx->arg.section_order),1);
+    VectorNew(&(ctx->chunks),1);
+    VectorNew(&(ctx->osec_pool),1);
+    VectorNew(&(ctx->string_pool),1);
 }
 int main(int argc, char **argv) {
     mold_version = get_mold_version();
@@ -167,11 +174,17 @@ int main(int argc, char **argv) {
     ctx.arg.hash_style_sysv = true;
     ctx.arg.hash_style_gnu = true;
     ctx.arg.z_relro = true;
+    ctx.arg.discard_all = false;
+    ctx.arg.strip_all = false;
+    ctx.arg.discard_locals = false;
+    ctx.arg.omagic = false;
+    ctx.arg.rosegment = true;
+    ctx.arg.z_stack_size = 0;
     ctx.merged_sections_count = 0;
-    VectorNew(&(ctx.arg.section_order),1);
-    VectorNew(&(ctx.chunks),1);
-    VectorNew(&(ctx.osec_pool),1);
-    VectorNew(&(ctx.string_pool),1);
+
+    init_context(&ctx);
+    
+    // VectorNew(&(&ctx)->string_pool,1);
     // 使用展开后的参数列表
     // printf("Expanded arguments:\n");
     // for (int i = 0; ctx.cmdline_args[i] != NULL; i++) {
@@ -186,6 +199,8 @@ int main(int argc, char **argv) {
     // 读取输入文件
     read_input_files(&ctx, file_args);
 
+    ctx.page_size = target.page_size;
+    
     if (!ctx.arg.relocatable)
         create_internal_file(&ctx);
     
@@ -220,7 +235,20 @@ int main(int argc, char **argv) {
     compute_section_sizes(&ctx);
 
     sort_output_sections(&ctx);
-    // 释放动态分配的内存
-    free_vec(ctx.cmdline_args);
+    // ctx.dynsym->finalize(ctx);  暂时没有
+
+    // Fill .gnu.version_r section contents.
+    // 对verneed段进行构造，实际写入内容。其中包含了字符串信息，因此还会将字符串写入dynstr中
+    verneed_construct(&ctx);
+
+    // Compute .symtab and .strtab sizes for each file.
+    create_output_symtab(&ctx);
+
+    // 构造output .eh_frame
+    eh_frame_construct(&ctx);
+
+    // Compute the section header values for all sections.
+    compute_section_headers(&ctx);
+
     return 0;
 }

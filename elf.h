@@ -267,6 +267,30 @@ enum {
     R_NONE = 0,
 };
 
+enum {
+    PT_NULL = 0,
+    PT_LOAD = 1,
+    PT_DYNAMIC = 2,
+    PT_INTERP = 3,
+    PT_NOTE = 4,
+    PT_SHLIB = 5,
+    PT_PHDR = 6,
+    PT_TLS = 7,
+    PT_GNU_EH_FRAME = 0x6474e550,
+    PT_GNU_STACK = 0x6474e551,
+    PT_GNU_RELRO = 0x6474e552,
+    PT_OPENBSD_RANDOMIZE = 0x65a3dbe6,
+    PT_ARM_EXIDX = 0x70000001,
+    PT_RISCV_ATTRIBUTES = 0x70000003,
+};
+
+enum {
+    PF_NONE = 0,
+    PF_X = 1,
+    PF_W = 2,
+    PF_R = 4,
+};
+
 typedef struct  {
     char *target_name;
     bool is_64;
@@ -369,3 +393,14 @@ typedef struct {
     U24 r_sym;
     u8 r_type;
 } ElfRel;
+
+typedef struct {
+    U32 p_type;
+    U32 p_offset;
+    U32 p_vaddr;
+    U32 p_paddr;
+    U32 p_filesz;
+    U32 p_memsz;
+    U32 p_flags;
+    U32 p_align;
+} ElfPhdr;

@@ -1,4 +1,8 @@
 #include "mold.h"
+typedef struct PltGotSection PltGotSection;
+typedef struct GotSection GotSection;
+typedef struct PltSection PltSection;
+typedef struct DynsymSection DynsymSection;
 typedef struct Chunk {
     ElfShdr shdr;
     char *name;
@@ -14,6 +18,14 @@ typedef struct Chunk {
     i64 reldyn_offset ;
     OutputSection *outsec;
     bool is_outsec;
+    GotSection *gotsec;
+    bool is_gotsec;
+    PltGotSection *pltgotsec;
+    bool is_pltgot;
+    PltSection *pltsec;
+    bool is_plt;
+    DynsymSection *dynsym_sec;
+    bool is_dynsym;
 } Chunk;
 
 typedef struct {
@@ -21,7 +33,7 @@ typedef struct {
     Chunk *chunk;
 } OutputEhdr;
 
-typedef struct {
+struct GotSection{
     /* data */
     Chunk *chunk;
     // Symbol *
@@ -30,7 +42,7 @@ typedef struct {
     vector tlsdesc_syms;
     vector gottp_syms;
     u32 tlsld_idx;
-} GotSection;
+};
 
 typedef struct {
     Chunk *chunk;
@@ -70,21 +82,19 @@ typedef struct
     i64 DATA;
 } StrtabSection;
 
-typedef struct  
-{
+struct PltSection {
     /* data */
     Chunk *chunk;
     // Symbol*
     vector symbols;
-} PltSection;
+};
 
-typedef struct  
-{
+struct PltGotSection {
     /* data */
     Chunk *chunk;
     // Symbol *
     vector symbols;
-} PltGotSection;
+};
 
 typedef struct  
 {
@@ -92,12 +102,12 @@ typedef struct
     Chunk *chunk;
 } SymtabSection;
 
-typedef struct {
+struct DynsymSection{
     Chunk *chunk;
     // Symbol *
     vector symbols;
     bool finalized;
-} DynsymSection;
+};
 
 typedef struct  
 {
@@ -119,7 +129,6 @@ typedef struct
     u32 num_fdes;
 } EhFrameHdrSection;
 typedef struct RelocS RelocSection;
-typedef struct OutputS OutputSection;
 struct OutputS{
     Chunk *chunk;
     // InputSection *
@@ -128,6 +137,8 @@ struct OutputS{
     vector thunks;
     RelocSection **reloc_sec;
 };
+
+typedef struct OutputS OutputSection;
 
 struct RelocS{
     Chunk *chunk;
@@ -174,6 +185,7 @@ typedef struct {
     /* data */
     Chunk *chunk;
 } RelroPaddingSection;
+
 
 
 

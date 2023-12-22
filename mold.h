@@ -37,7 +37,7 @@ typedef struct OutputSectionKey OutputSectionKey;
 // 定义上下文信息的结构体
 ARM32 target;
 
-
+typedef enum { HEADER, OUTPUT_SECTION, SYNTHETIC } ChunkKind;
 
 typedef struct {
     const char* key;
@@ -74,6 +74,9 @@ typedef struct
     StringView symbol_strtab;
     vector local_syms;
     vector frag_syms;
+
+    // i32
+    vector output_sym_indices;
 } Inputefile;
 
 typedef struct {
@@ -126,6 +129,9 @@ struct ObjectFile{
     vector symbols;
 
     BitVector has_symver;
+    // CieRecord
+    vector cies;
+    vector fdes;
 } ;
 
 typedef struct {
@@ -168,6 +174,12 @@ struct Context {
         bool gc_sections;
         bool eh_frame_hdr;
         bool start_stop;
+        bool strip_all;
+        bool discard_all;
+        bool discard_locals;
+        bool omagic;
+        bool rosegment;
+        vector retain_symbols_file;
         vector section_order;
 
         SeparateCodeKind z_separate_code;
@@ -192,6 +204,7 @@ struct Context {
         bool z_sectionheader;
         bool z_shstk;
         bool z_text;
+        i64 z_stack_size;
     } arg;
 
     i64 default_version;
@@ -201,6 +214,9 @@ struct Context {
     // Symbol table
     ELFSymbol *symbol_map;
     int map_size;
+    i64 page_size;
+
+
     // 其他成员变量的定义
     ObjectFile *internal_obj;
     ObjectFile **obj_pool;
@@ -312,6 +328,18 @@ void scan_relocations(Context *ctx);
 void compute_section_sizes(Context *ctx);
 void create_range_extension_thunks(Context *ctx,OutputSection *osec);
 void sort_output_sections(Context *ctx);
+void verneed_construct(Context *ctx);
+void create_output_symtab(Context *ctx);
+void eh_frame_construct(Context *ctx);
+void output_sec_compute_symtab_size(Context *ctx,Chunk *chunk);
+void plt_sec_compute_symtab_size(Context *ctx,Chunk *chunk);
+void pltgot_sec_compute_symtab_size(Context *ctx,Chunk *chunk);
+void got_sec_compute_symtab_size(Context *ctx,Chunk *chunk);
+void obj_compute_symtab_size(Context *ctx,ObjectFile *file);
+
+void create_output_symtab(Context *ctx);
+void compute_section_headers(Context *ctx);
+void output_phdr_update_shdr(Context *ctx,Chunk *chunk);
 // 获取输入input_section
 static inline ElfShdr *get_shdr(ObjectFile *file,int shndx) {
   if (shndx < file->inputfile.elf_sections_num)
@@ -374,6 +402,45 @@ static inline bool is_c_identifier(const char* s) {
         if (!is_alnum(s[i]))
             return false;
     return true;
+}
+
+static inline InputSection *elfsym_get_input_section(ELFSymbol *sym){
+    if ((sym->origin & TAG_MASK) == TAG_ISEC)
+        return (InputSection *)(sym->origin & ~TAG_MASK);
+    return NULL;
+}
+
+static inline u32 elfsym_get_type(ObjectFile *file,int i){
+  if (esym(&(file->inputfile),i)->st_type == STT_GNU_IFUNC && file->inputfile.is_dso)
+    return STT_FUNC;
+  return esym(&(file->inputfile),i)->st_type;
+}
+
+static inline SectionFragment *get_frag(ELFSymbol *sym) {
+  if ((sym->origin & TAG_MASK) == TAG_FRAG)
+    return (SectionFragment *)(sym->origin & ~TAG_MASK);
+  return NULL;
+}
+
+static inline bool is_local(Context *ctx,ELFSymbol *sym,ObjectFile *file,int i) {
+    if (ctx->arg.relocatable)
+        return esym(&(file->inputfile),i)->st_bind == STB_LOCAL;
+    return !sym->is_imported && !sym->is_exported;
+}
+
+static inline OutputSection *output_find_section(Context *ctx,u32 sh_type) {
+    for (i64 i = 0;i < ctx->chunks.size;i++) {
+        Chunk *chunk = ctx->chunks.data[i];
+        OutputSection *osec = chunk->outsec;
+        if (osec)
+            if (*osec->chunk->shdr.sh_type.val == sh_type)
+                return osec;
+    }      
+    return NULL;
+}
+
+static inline u64 to_plt_offset(i32 pltidx) {
+    return target.plt_hdr_size + pltidx * target.plt_size;
 }
 #endif  // 结束头文件保护
 

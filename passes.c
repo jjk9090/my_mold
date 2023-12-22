@@ -1,6 +1,5 @@
 #include "mold.h"
 #include "xxhash.h"
-
 Context *global_ctx;
 
 char *get_output_name(Context *ctx, char *name, u64 flags) {
@@ -48,6 +47,7 @@ char *get_output_name(Context *ctx, char *name, u64 flags) {
 
     return name;
 }
+
 u64 canonicalize_type(char *name, u64 type) {
   if (type == SHT_PROGBITS) {
     if (!strcmp(name,".init_array") || starts_with(name,".init_array."))
@@ -57,6 +57,7 @@ u64 canonicalize_type(char *name, u64 type) {
   }
   return type;
 }
+
 OutputSectionKey *get_output_section_key(Context *ctx,InputSection *isec,ObjectFile *file,int i) {
     const ElfShdr *shdr = get_shdr(file,i);
     char *name = strdup(get_output_name(ctx, get_name(file,i), *shdr->sh_flags.val));
@@ -74,6 +75,7 @@ OutputSectionKey *get_output_section_key(Context *ctx,InputSection *isec,ObjectF
     key->type = type;
     return key;
 }
+
 void create_internal_file(Context *ctx) {
     ctx->obj_pool = (ObjectFile **)malloc(sizeof(ObjectFile *) * 10);
     ObjectFile *obj = (ObjectFile *)malloc(sizeof(ObjectFile));
@@ -98,11 +100,11 @@ void create_internal_file(Context *ctx) {
     obj->inputfile.elf_syms = (ElfSym **)(ctx->internal_esyms.data);
     resize(&(obj->has_symver), ctx->internal_esyms.size);
 
+    VectorNew(&(ctx->objs),1);
     VectorAdd(&(ctx->objs),obj,sizeof(ObjectFile *));
     VectorAdd(&(ctx->internal_esyms),elfsym,sizeof(ElfSym *));
 
     ObjectFile *file = *((ObjectFile**)(ctx->objs.data) + 1);
-
 }
 
 void mark_live_objects(Context *ctx) {
@@ -148,12 +150,13 @@ void resolve_symbols(Context *ctx) {
 
 char* save_string(Context *ctx, char *str, int len) {
     if (str) {
-        VectorAdd(&(ctx->string_pool),str,len);
+        VectorAdd(&(ctx->string_pool),str,sizeof(char *));
         return str;
     } else {
         return NULL;
     }
 }
+
 uint64_t hash_string(char *str) {
     size_t size = strlen(str);
     return XXH3_64bits(str, size);
@@ -193,6 +196,7 @@ void compute_merged_section_sizes(Context *ctx) {
     }
     assign_offsets(ctx,sec);
 }
+
 bool sec_order_find (Context *ctx,char *name) {
     if (ctx->arg.section_order.size != 0) {
         for (int i = 0;i < ctx->arg.section_order.size;i++) {
@@ -258,6 +262,7 @@ GotPltSection *create_got_plt(Context *ctx) {
     *got_plt->chunk->shdr.sh_size.val = got_plt->HDR_SIZE;
     return got_plt;
 }
+
 RelDynSection *create_reldyn() {
     RelDynSection *reldyn = (RelDynSection *)malloc(sizeof(RelDynSection));
     reldyn->chunk = (Chunk *)malloc(sizeof(Chunk));
@@ -278,6 +283,7 @@ RelPltSection *create_relplt() {
     *relplt->chunk->shdr.sh_addralign.val = sizeof(Word);
     return relplt;
 }
+
 StrtabSection *create_strtab() {
     StrtabSection *strtab = (StrtabSection *)malloc(sizeof(StrtabSection));
     strtab->chunk = (Chunk *)malloc(sizeof(Chunk));
@@ -329,6 +335,7 @@ DynsymSection *create_dynsym() {
     *dynsym->chunk->shdr.sh_addralign.val = sizeof(Word);
     return dynsym;
 }
+
 EhFrameSection *create_enframe() {
     EhFrameSection *ehframe = (EhFrameSection *)malloc(sizeof(EhFrameSection));
     ehframe->chunk = (Chunk *)malloc(sizeof(Chunk));
@@ -466,7 +473,11 @@ void create_synthetic_sections(Context *ctx) {
     }
 
     ctx->got = create_got(0);
+    ctx->got->chunk->gotsec = ctx->got;
+    ctx->got->chunk->is_gotsec = true;
     VectorAdd(&(ctx->chunks),ctx->got->chunk,sizeof(Chunk *));
+
+
     ctx->gotplt = create_got_plt(ctx);
     VectorAdd(&(ctx->chunks),ctx->gotplt->chunk,sizeof(Chunk *));
 
@@ -479,10 +490,15 @@ void create_synthetic_sections(Context *ctx) {
     VectorAdd(&(ctx->chunks),ctx->strtab->chunk,sizeof(Chunk *));
 
     ctx->plt = create_plt();
+    ctx->plt->chunk->pltsec = ctx->plt;
+    ctx->plt->chunk->is_plt = true;
     VectorAdd(&(ctx->chunks),ctx->plt->chunk,sizeof(Chunk *));
 
     ctx->pltgot = create_plt_got();
+    ctx->pltgot->chunk->pltgotsec = ctx->pltgot;
+    ctx->pltgot->chunk->is_pltgot = true;
     VectorAdd(&(ctx->chunks),ctx->pltgot->chunk,sizeof(Chunk *));
+    
     ctx->symtab = create_symtab();
     VectorAdd(&(ctx->chunks),ctx->symtab->chunk,sizeof(Chunk *));
 
@@ -689,6 +705,7 @@ ELFSymbol *add_sym(Context *ctx,ObjectFile *obj,char *name) {
     esym->st_visibility = STV_HIDDEN;
     VectorAdd(&(ctx->internal_esyms),esym,sizeof(ElfSym *));
     ELFSymbol *sym = insert_symbol(ctx,name,name);
+    sym_init(sym);
     sym->value =  0xdeadbeef; // unique dummy value
     VectorAdd(&(obj->symbols),sym,sizeof(ELFSymbol *));
     return sym;
@@ -983,17 +1000,27 @@ int compare_chunks_out(const void* a, const void* b) {
 
 void sort_output_sections_regular(Context *ctx) {
     global_ctx = ctx;
-    Chunk *temp1[ctx->chunks.size];
-    for (int i = 0; i < ctx->chunks.size; i++) {
-        temp1[i] = (Chunk *)(ctx->chunks.data[i]);
-    }
-    qsort(temp1, ctx->chunks.size, sizeof(Chunk *), compare_chunks_out);
-    // 验证
-    for (int i = 0; i < ctx->chunks.size; i++) {
+    size_t size = ctx->chunks.size;
+    // Chunk *temp1[ctx->chunks.size];
+    // for (int i = 0; i < ctx->chunks.size; i++) {
+    //     temp1[i] = (Chunk *)(ctx->chunks.data[i]);
+    // }
+    // qsort(temp1, ctx->chunks.size, sizeof(Chunk *), compare_chunks_out);
+    qsort(ctx->chunks.data, ctx->chunks.size, sizeof(Chunk *), compare_chunks_out);
+    for (int i = 0; i < size; i++) {
         // 获取当前元素
-        Chunk* currentElement = temp1[i];
+        Chunk* currentElement = ctx->chunks.data[i];
         printf("finalname: %s\n", currentElement->name);
     } 
+    // ctx->chunks.data = NULL;
+    // VectorNew(&(ctx->chunks),1);
+    // // 验证
+    // for (int i = 0; i < size; i++) {
+    //     // 获取当前元素
+    //     Chunk* currentElement = temp1[i];
+    //     printf("finalname: %s\n", currentElement->name);
+    //     VectorAdd(&(ctx->chunks),currentElement,sizeof(Chunk *));
+    // } 
 }
 
 void sort_output_sections(Context *ctx) {
@@ -1001,9 +1028,92 @@ void sort_output_sections(Context *ctx) {
         sort_output_sections_regular(ctx);
 }
 
+void create_output_symtab(Context *ctx) {
+    if (!ctx->arg.strip_all && !ctx->arg.retain_symbols_file.size) {
+        for(int i = 0;i < ctx->chunks.size;i++) {
+            Chunk *chunk = ctx->chunks.data[i];
+            if (chunk->is_outsec)
+                output_sec_compute_symtab_size(ctx,chunk);
+            if (chunk->is_gotsec)
+                got_sec_compute_symtab_size(ctx,chunk);
+            if (chunk->is_plt)
+                plt_sec_compute_symtab_size(ctx,chunk);
+            if (chunk->is_pltgot)
+                pltgot_sec_compute_symtab_size(ctx,chunk);
+        }
+    }
+    for(int i = 0;i < ctx->objs.size;i++) {
+        ObjectFile *file = ctx->objs.data[i];
+        obj_compute_symtab_size(ctx,file);
+    }
+}
 
+void update_shdr(Context *ctx) {
+    for(int i = 0;i < ctx->chunks.size;i++) {
+        Chunk *chunk = ctx->chunks.data[i];
+        if (!strcmp(chunk->name,"PHDR")) 
+            output_phdr_update_shdr(ctx,chunk);
+        if (!strcmp(chunk->name,".rel.dyn"))
+            reldyn_update_shdr(ctx,chunk);
+        if (!strcmp(chunk->name,".strtab"))
+            strtab_update_shdr(ctx,chunk);
+        if (!strcmp(chunk->name,".shstrtab"))
+            shstrtab_update_shdr(ctx,chunk);
+        if (!strcmp(chunk->name,".symtab"))
+            symtab_update_shdr(ctx,chunk);
+        if (!strcmp(chunk->name,".got.plt"))
+            gotplt_update_shdr(ctx,chunk);
+        if (!strcmp(chunk->name,".plt"))
+            plt_update_shdr(ctx,chunk);
+        if (!strcmp(chunk->name,".rel.plt"))
+            relplt_update_shdr(ctx,chunk);
+        if (!strcmp(chunk->name,".dynsym"))
+            dynsym_update_shdr(ctx,chunk);
+        if (!strcmp(chunk->name,".hash"))
+            hash_update_shdr(ctx,chunk);
+        if (!strcmp(chunk->name,".gnu.hash"))
+            gnu_hash_update_shdr(ctx,chunk);
+        if (!strcmp(chunk->name,".eh_frame_hdr"))
+            eh_frame_hdr_update_shdr(ctx,chunk);
+        if (!strcmp(chunk->name,".gnu.version"))
+            gnu_version_update_shdr(ctx,chunk);
+        if (!strcmp(chunk->name,".gnu.version_r"))
+            gnu_version_r_update_shdr(ctx,chunk);
+    }
+}
+void compute_section_headers(Context *ctx) {
+    int p = 0;
+    // 所有输出段更新shdr
+    update_shdr(ctx);
 
+    // Remove empty chunks.
+    for (int i = 0; i < ctx->chunks.size; ) {
+        Chunk *chunk = ctx->chunks.data[i];
+        if (kind(chunk) != OUTPUT_SECTION  &&
+            *chunk->shdr.sh_size.val == 0) {
+            // 删除当前元素
+            free(chunk);
+            for (int j = i; j < ctx->chunks.size - 1; j++) {
+                ctx->chunks.data[j] = ctx->chunks.data[j+1];
+            }
+            ctx->chunks.size--;
+        } else {
+            i++;
+        }
+    }
 
+    // Set section indices.
+    i64 shndx = 1;
+    for(i64 i = 0;i < ctx->chunks.size;i++) 
+        if(kind(ctx->chunks.data[i]) != HEADER)
+            ((Chunk *)ctx->chunks.data[i])->shndx = shndx++;
+    
+    if(ctx->shdr)
+        *ctx->shdr->chunk->shdr.sh_size.val = shndx * sizeof(ElfShdr);
+
+    update_shdr(ctx);
+    
+}
 
 
 

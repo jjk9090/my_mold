@@ -238,16 +238,15 @@ void initialize_sections(Context *ctx,ObjectFile *file) {
 void initialize_symbols (Context *ctx,ObjectFile *obj) {
     if (!obj->symtab_sec)
         return;
-    
+    VectorNew(&(obj->symbols),1);
     // Initialize local symbols
     VectorNew(&local_syms,10);
-    ELFSymbol sym;
-    sym_init(&sym);
-    sym.file = (ObjectFile *)malloc(sizeof(ObjectFile ));
-    sym.file = obj;
-    sym.sym_idx = 0;
+    ELFSymbol *sym = (ELFSymbol *)malloc(sizeof(ELFSymbol));
+    sym_init(sym);
+    sym->file = obj;
+    sym->sym_idx = 0;
     // Vectorpush_back(&local_syms,&sym);
-    VectorAdd(&local_syms,&sym,sizeof(ELFSymbol));
+    VectorAdd(&local_syms,sym,sizeof(ELFSymbol *));
     // 70c8 0x7ffff7fc70b8 0x7ffff7fc70a8
     i64 i = 0;
     for (i = 2; i < first_global * 2; i = i + 2) {
@@ -263,15 +262,13 @@ void initialize_symbols (Context *ctx,ObjectFile *obj) {
             name = (char *)(symbol_strtab.data + *esym->st_name.val);
         }
         printf("%s\n",name);
-        ELFSymbol sym2;
-        sym_init(&sym2);
-        // sym2 = (ELFSymbol *)local_syms.ddata[1];     
-        sym2.file = (ObjectFile *)malloc(sizeof(ObjectFile));
-        sym2.file = obj;
-        sym2.nameptr = strdup(name);
-        sym2.value = (u64)(esym->st_value.val);
-        sym2.sym_idx = i - 1;
-        VectorAdd(&local_syms,&sym2,sizeof(ELFSymbol));
+        ELFSymbol *sym2 = (ELFSymbol *)malloc(sizeof(ELFSymbol));
+        sym_init(sym2);
+        sym2->file = obj;
+        sym2->nameptr = strdup(name);
+        sym2->value = (u64)(esym->st_value.val);
+        sym2->sym_idx = i - 1;
+        VectorAdd(&local_syms,sym2,sizeof(ELFSymbol *));
         // Vectorpush_back(&local_syms,&sym2);
     }
     VectorNew(&(obj->inputfile.local_syms),10);
@@ -295,10 +292,12 @@ void initialize_symbols (Context *ctx,ObjectFile *obj) {
         char *name = key;
         ELFSymbol *symbol = insert_symbol(ctx,key,name);
         sym_init(symbol);
-        VectorAdd(&symbols,symbol,sizeof(ELFSymbol));
+        VectorAdd(&symbols,symbol,sizeof(ELFSymbol *));
     }
     obj->inputfile.symbols = symbols;
+    obj->symbols = symbols;
 }
+
 void parse(Context *ctx,ObjectFile *obj) {
     obj->symtab_sec = find_section(SHT_SYMTAB);
 
@@ -336,6 +335,7 @@ static u64 get_sym_rank(ElfSym *esym, Inputefile *file, bool is_in_archive) {
         return 2;
     return 1;
 }
+
 static u64 get_rank (Inputefile *file,ElfSym *esym, bool is_in_archive) {
     return (get_sym_rank(esym,file,is_in_archive) << 24) + file->priority;
 }
@@ -408,6 +408,7 @@ StringView *substring(StringView *view, size_t start, size_t length) {
     size_t size = (length <= view->size - start) ? length : (view->size - start);
     return create_string_view(data, size);
 }
+
 MergeableSection *split_section(Context *ctx,InputSection *sec,ObjectFile *file,int i) {
     if (!sec->is_alive || sec->relsec_idx != -1) 
         return NULL;
@@ -515,6 +516,7 @@ SectionFragment *get_fragment(i64 offset, MergeableSection *m) {
         return result;
     }
 }
+
 void file_resolve_section_pieces(Context *ctx,ObjectFile *file) {
     for(int i = 0;;i++) {
         MergeableSection *m = file->mergeable_sections.data[i];
@@ -623,9 +625,72 @@ void obj_scan_relocations(Context *ctx,ObjectFile *file) {
         }
     }
 }
+
 void scan_relocations(Context *ctx) {
     for (int i = 0;i < ctx->objs.size;i++) {
         ObjectFile *file = (ObjectFile *)ctx->objs.data[i];
         obj_scan_relocations(ctx,file);
+    }
+}
+
+static bool should_write_to_local_symtab(Context *ctx, ELFSymbol *sym,int i,ObjectFile *file) {
+    if (elfsym_get_type(file,i) == STT_SECTION)
+        return false;
+    if (starts_with(sym->nameptr,".L")) {
+        if (ctx->arg.discard_locals)
+        return false;
+        InputSection *isec = elfsym_get_input_section(sym);
+        if (isec)
+            if (*get_shdr(file,i)->sh_flags.val & SHF_MERGE)
+                return false;
+    }
+
+    return true;
+}
+
+bool is_alive(ELFSymbol *sym) {
+    SectionFragment *frag = get_frag(sym);
+    if (frag)
+        return frag->is_alive;
+    InputSection *isec = elfsym_get_input_section(sym);
+    if (isec)
+        return isec->is_alive;
+    return true;
+}
+void obj_compute_symtab_size(Context *ctx,ObjectFile *file) {
+    if(ctx->arg.strip_all)
+        return;
+    VectorNew(&(file->inputfile.output_sym_indices),file->inputfile.elf_syms_num);
+    
+    // Compute the size of local symbols
+    if (!ctx->arg.discard_all && !ctx->arg.strip_all && !ctx->arg.retain_symbols_file.size) {
+        for(i64 i = 1;i < file->inputfile.first_global;i++) {
+            ELFSymbol *sym = file->symbols.data[i];
+
+            if (is_alive(sym) && should_write_to_local_symtab(ctx, sym,i,file)) {
+                file->inputfile.strtab_size += sym->namelen + 1;
+                i32* cin = (i32*)malloc(sizeof(i32));
+                *cin = file->inputfile.num_local_symtab++;
+                VectorAdd(&(file->inputfile.output_sym_indices),cin,sizeof(i32 *));
+                sym->write_to_symtab = true;
+            }
+        }
+    }
+
+    // Compute the size of global symbols.
+    for(i64 i = file->inputfile.first_global;i < file->inputfile.elf_syms_num;i++) {
+        ELFSymbol *sym = file->symbols.data[i];
+        if (sym->file == file && is_alive(sym) && 
+            (!ctx->arg.retain_symbols_file.size || sym->write_to_symtab)) {
+            file->inputfile.strtab_size += sym->namelen + 1;
+            i32* cin = (i32*)malloc(sizeof(i32));
+            if (is_local(ctx,sym,file,i)) 
+                *cin = file->inputfile.num_local_symtab++;
+            else 
+                *cin = file->inputfile.num_global_symtab++;
+            
+            VectorAdd(&(file->inputfile.output_sym_indices),cin,sizeof(i32 *));
+            sym->write_to_symtab = true;    
+        }
     }
 }
