@@ -6,10 +6,6 @@
 
 #IncludeRegexTransform: 
 
-/home/jjk/project/mold2/my_mold/arch-arm32.c
-mold.h
-/home/jjk/project/mold2/my_mold/mold.h
-
 /home/jjk/project/mold2/my_mold/bigvector.h
 stdlib.h
 -
@@ -130,6 +126,12 @@ mold.h
 mold.h
 /home/jjk/project/mold2/my_mold/mold.h
 
+/home/jjk/project/mold2/my_mold/passes.c
+mold.h
+/home/jjk/project/mold2/my_mold/mold.h
+xxhash.h
+/home/jjk/project/mold2/my_mold/xxhash.h
+
 /home/jjk/project/mold2/my_mold/symbol.h
 stdlib.h
 -
@@ -139,4 +141,46 @@ stdio.h
 -
 mold.h
 /home/jjk/project/mold2/my_mold/mold.h
+
+/home/jjk/project/mold2/my_mold/xxhash.h
+stddef.h
+-
+stdint.h
+-
+limits.h
+-
+stdint.h
+-
+limits.h
+-
+stdalign.h
+-
+stdlib.h
+-
+string.h
+-
+limits.h
+-
+assert.h
+-
+stdint.h
+-
+arm_sve.h
+-
+arm_neon.h
+-
+immintrin.h
+-
+emmintrin.h
+-
+intrin.h
+-
+s390intrin.h
+-
+altivec.h
+-
+mmintrin.h
+-
+string.h
+-
 

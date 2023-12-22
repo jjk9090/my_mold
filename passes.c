@@ -1332,7 +1332,8 @@ void fix_synthetic_symbols(Context *ctx) {
     }
 
     // _DYNAMIC
-    start(ctx->_DYNAMIC, ctx->dynamic->chunk);
+    if (ctx->dynamic)
+        start(ctx->_DYNAMIC, ctx->dynamic->chunk);
 
     start(ctx->_GLOBAL_OFFSET_TABLE_, ctx->got->chunk);
 
