@@ -1111,9 +1111,257 @@ void compute_section_headers(Context *ctx) {
     if(ctx->shdr)
         *ctx->shdr->chunk->shdr.sh_size.val = shndx * sizeof(ElfShdr);
 
-    update_shdr(ctx);
-    
+    update_shdr(ctx);  
 }
 
+i64 get_flags(Context *ctx,Chunk *chunk) {
+    i64 RELRO = 1LL << 32;
+    i64 flags = to_phdr_flags(ctx, chunk);
+    if(chunk->is_relro)
+        return flags | RELRO;
+    return flags;
+}
 
+void set_virtual_addresses_regular (Context *ctx) {
+    i64 RELRO = 1LL << 32;
+    vector chunks = ctx->chunks;
+    u64 addr = ctx->arg.image_base;
+
+    // 对tls chunk计算一个align
+    Chunk *first_tls_chunk = NULL;
+    u64 tls_alignment = 1;
+    for(int i = 0;i < chunks.size;i++) {
+        Chunk *chunk = chunks.data[i];
+        if(*chunk->shdr.sh_flags.val & SHF_TLS) {
+            if(!first_tls_chunk)
+                first_tls_chunk = chunk;
+            tls_alignment = tls_alignment > (u64)(*chunk->shdr.sh_addralign.val) ? tls_alignment : (u64)(*chunk->shdr.sh_addralign.val);
+        }
+    }
+
+    for(i64 i = 0;i < chunks.size;i++) {
+        if(!(*((Chunk *)chunks.data[i])->shdr.sh_flags.val & SHF_ALLOC))
+            continue;
+
+        if(chunks.data[i] == ctx->relro_padding) {
+            *((Chunk *)chunks.data[i])->shdr.sh_addr.val = addr;
+            *((Chunk *)chunks.data[i])->shdr.sh_size.val = align_to(addr,ctx->page_size);
+            addr += ctx->page_size;
+            continue;
+        }
+
+        if (i > 0 && chunks.data[i - 1] != ctx->relro_padding) {
+            i64 flags1 = get_flags(ctx,chunks.data[i - 1]);
+            i64 flags2 = get_flags(ctx,chunks.data[i]);
+
+            if (!ctx->arg.nmagic && flags1 != flags2) {
+                switch (ctx->arg.z_separate_code) {
+                    case SEPARATE_LOADABLE_SEGMENTS:
+                        addr = align_to(addr, ctx->page_size);
+                        break;
+                    case SEPARATE_CODE:
+                        if ((flags1 & PF_X) != (flags2 & PF_X)) {
+                            addr = align_to(addr, ctx->page_size);
+                            break;
+                        }
+                    case NOSEPARATE_CODE:
+                        if (addr % ctx->page_size != 0)
+                            addr += ctx->page_size;
+                        break;
+                    default:
+                        assert(0 && "unreachable");
+                }
+            }
+        }
+
+        u64 res = chunks.data[i] == first_tls_chunk ? tls_alignment : (u64)(*((Chunk *)chunks.data[i])->shdr.sh_addralign.val);
+        addr = align_to(addr, res);
+        *((Chunk *)chunks.data[i])->shdr.sh_addr.val = addr;
+        addr += *((Chunk *)chunks.data[i])->shdr.sh_size.val;
+    }
+}
+
+static u64 align_with_skew(u64 val, u64 align, u64 skew) {
+    u64 x = align_down(val, align) + skew % align;
+    return (val <= x) ? x : x + align;
+}
+
+i64 set_file_offsets(Context *ctx) {
+    vector chunks = ctx->chunks;
+    u64 fileoff = 0;
+    i64 i = 0;
+    while(i < chunks.size) {
+        Chunk *first = chunks.data[i];
+
+        if(!(*first->shdr.sh_flags.val & SHF_ALLOC)) {
+            fileoff = align_to(fileoff,*first->shdr.sh_addralign.val);
+            *first->shdr.sh_offset.val = fileoff;
+            fileoff += *first->shdr.sh_size.val;
+            i++;
+            continue;
+        }
+        if (*first->shdr.sh_type.val == SHT_NOBITS) {
+            i++;
+            continue;
+        }
+
+        if(*first->shdr.sh_addralign.val > ctx->page_size)
+            fileoff = align_to(fileoff,*first->shdr.sh_addralign.val);
+        else
+            fileoff = align_with_skew(fileoff,ctx->page_size,*first->shdr.sh_addr.val);
+        
+        // 分配ALLOC段连续的文件偏移量 在内存中是连续的
+        for(;;) {
+            *((Chunk *)chunks.data[i])->shdr.sh_offset.val = fileoff + *((Chunk *)chunks.data[i])->shdr.sh_addr.val - *first->shdr.sh_addr.val;
+            i++;
+
+            if(i >= chunks.size ||
+                !(*((Chunk *)chunks.data[i])->shdr.sh_flags.val & SHF_ALLOC) ||
+                *((Chunk *)chunks.data[i])->shdr.sh_type.val == SHT_NOBITS)
+                break;
+            
+            if (*((Chunk *)chunks.data[i])->shdr.sh_addr.val < *first->shdr.sh_addr.val)
+                break;
+            
+            i64 gap_size = *((Chunk *)chunks.data[i])->shdr.sh_addr.val - *((Chunk *)chunks.data[i - 1])->shdr.sh_addr.val -
+                            *((Chunk *)chunks.data[i - 1])->shdr.sh_size.val;
+            
+            if (gap_size >= ctx->page_size)
+                break;
+        }
+
+        fileoff = *((Chunk *)chunks.data[i - 1])->shdr.sh_offset.val + *((Chunk *)chunks.data[i - 1])->shdr.sh_size.val;
+
+        while(i < chunks.size &&
+            (*((Chunk *)chunks.data[i])->shdr.sh_flags.val &  SHF_ALLOC) &&
+            *((Chunk *)chunks.data[i])->shdr.sh_type.val == SHT_NOBITS)
+            i++;
+    } 
+    return fileoff;
+}
+
+i64 set_osec_offsets(Context *ctx) {
+    for (;;) {
+        // 设置段的虚拟地址
+        if (ctx->arg.section_order.size == 0)
+            set_virtual_addresses_regular(ctx);
+
+        // 设置段在文件中的offset
+        i64 fileoff = set_file_offsets(ctx);
+
+        if (ctx->phdr) {
+            i64 sz = *ctx->phdr->chunk->shdr.sh_size.val;
+            output_phdr_update_shdr(ctx,ctx->phdr->chunk);
+            if (sz != *ctx->phdr->chunk->shdr.sh_size.val)
+                continue;
+        }
+
+        // 返回文件的长度
+        return fileoff;
+    }
+}
+
+void start(ELFSymbol *sym, Chunk *chunk) {
+    i64 bias = 0;
+    if (sym && chunk) {
+        set_output_section(chunk,sym);
+        sym->value = *chunk->shdr.sh_addr.val + bias;
+    }
+}
+
+Chunk *find(char *name,vector sections) {
+    for(int i = 0;i < sections.size;i++) {
+        Chunk *chunk = sections.data[i];
+        if (!strcmp(chunk->name,name))
+            return chunk;
+    }
+    return NULL;
+}
+
+void stop(ELFSymbol *sym, Chunk *chunk) {
+    if (sym && chunk) {
+        set_output_section(chunk,sym);
+        sym->value = *chunk->shdr.sh_addr.val + *chunk->shdr.sh_size.val;
+    }
+}
+
+void fix_synthetic_symbols(Context *ctx) {
+    vector sections;
+    VectorNew(&sections,1);
+    for(int i = 0;i < ctx->chunks.size;i++) {
+        Chunk *chunk = ctx->chunks.data[i];
+        if(kind(chunk) != HEADER && (*chunk->shdr.sh_flags.val & SHF_ALLOC)) 
+            VectorAdd(&sections,chunk,sizeof(Chunk *));
+    }
+
+    // __bss_start
+    Chunk *chunk = find(".bss",sections);
+    if (chunk)
+        start(ctx->__bss_start, chunk);
+
+    if (ctx->ehdr && (*ctx->ehdr->chunk->shdr.sh_flags.val & SHF_ALLOC)) {
+        set_output_section(sections.data[0],ctx->__ehdr_start);
+        ctx->__ehdr_start->value = *ctx->ehdr->chunk->shdr.sh_addr.val;
+        set_output_section(sections.data[0],ctx->__executable_start);
+        ctx->__executable_start->value = *ctx->ehdr->chunk->shdr.sh_addr.val;
+    }
+
+    if (ctx->__dso_handle) {
+        set_output_section(sections.data[0],ctx->__dso_handle);
+        ctx->__dso_handle->value = *((Chunk *)sections.data[0])->shdr.sh_addr.val;
+    }
+
+    // _end, _etext, _edata and the like
+    for(int i = 0;i < sections.size;i++) {
+        Chunk *chunk = sections.data[i];
+        if (*chunk->shdr.sh_flags.val & SHF_ALLOC) {
+            stop(ctx->_end, chunk);
+            stop(ctx->end, chunk);
+        }
+
+        if (*chunk->shdr.sh_flags.val & SHF_EXECINSTR) {
+            stop(ctx->_etext, chunk);
+            stop(ctx->etext, chunk);
+        }
+
+        if(*chunk->shdr.sh_type.val != SHT_NOBITS &&
+            (*chunk->shdr.sh_flags.val & SHF_ALLOC)) {
+            stop(ctx->_edata, chunk);
+            stop(ctx->edata, chunk);
+        }
+    }
+
+    // _DYNAMIC
+    start(ctx->_DYNAMIC, ctx->dynamic->chunk);
+
+    start(ctx->_GLOBAL_OFFSET_TABLE_, ctx->got->chunk);
+
+    // _PROCEDURE_LINKAGE_TABLE_. We need this on SPARC.
+    start(ctx->_PROCEDURE_LINKAGE_TABLE_, ctx->plt->chunk);
+
+    if (ctx->_TLS_MODULE_BASE_) {
+        set_output_section(sections.data[0],ctx->_TLS_MODULE_BASE_);
+        ctx->_TLS_MODULE_BASE_->value = ctx->dtp_addr;
+    }
+
+    // __GNU_EH_FRAME_HDR
+    start(ctx->__GNU_EH_FRAME_HDR, ctx->eh_frame_hdr->chunk);
+
+    // ARM32's __exidx_{start,end}
+    if (ctx->__exidx_start) {
+        Chunk *chunk = find(".ARM.exidx",sections);
+        if (chunk) {
+            start(ctx->__exidx_start, chunk);
+            stop(ctx->__exidx_end, chunk);
+        }
+    }
+
+    // __start_ and __stop_ symbols
+    // 貌似没有
+
+}
+
+void copy_chunks(Context *ctx) {
+    
+}
 

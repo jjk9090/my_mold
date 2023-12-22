@@ -72,7 +72,8 @@
         "new_vector.h": "c",
         "assert.h": "c",
         "elf_symbol.h": "c",
-        "output_file.h": "c"
+        "output_file.h": "c",
+        "output-file-unix.h": "c"
     },
     "C_Cpp.errorSquiggles": "enabled"
 }

@@ -10,6 +10,7 @@
 #include <string.h>
 #include <stdint.h>
 #include <assert.h>
+
 typedef struct Context Context;
 typedef struct StringView{
     const char* data;
@@ -140,8 +141,21 @@ typedef struct {
     u64 value;
 } SectionOrder;
 
+typedef struct {
+    /* data */
+    u8 *buf;
+    // u8
+    vector buf2;
+    char *path;
+    i64 fd;
+    i64 filesize;
+    bool is_mmapped;
+    bool is_unmapped;
+} OutputFile;
+
 #include "symbol.h"
 #include "output_file.h"
+
 typedef enum {
     SEPARATE_LOADABLE_SEGMENTS,
     SEPARATE_CODE,
@@ -155,6 +169,8 @@ struct Context {
     vector objs;
     vector string_pool;
 
+    u8 *buf;
+    OutputFile *output_file;
     struct {
         /* data */
         ELFSymbol *entry;
@@ -179,9 +195,12 @@ struct Context {
         bool discard_locals;
         bool omagic;
         bool rosegment;
+        bool execute_only;
+        bool nmagic;
         vector retain_symbols_file;
         vector section_order;
 
+        char *chroot;
         SeparateCodeKind z_separate_code;
         bool hash_style_sysv;
         bool hash_style_gnu;
@@ -205,6 +224,8 @@ struct Context {
         bool z_shstk;
         bool z_text;
         i64 z_stack_size;
+        u64 image_base;
+        i64 filler;
     } arg;
 
     i64 default_version;
@@ -215,7 +236,7 @@ struct Context {
     ELFSymbol *symbol_map;
     int map_size;
     i64 page_size;
-
+    u64 dtp_addr;
 
     // 其他成员变量的定义
     ObjectFile *internal_obj;
@@ -224,6 +245,7 @@ struct Context {
     vector internal_esyms;
     vector merged_sections;
     int merged_sections_count;
+    bool overwrite_output_file;
     // 里面放置一个个section
     vector chunks;
 
@@ -235,7 +257,7 @@ struct Context {
     RelPltSection *relplt;
     RelDynSection *reldyn;
     // RelrDynSection *relrdyn;
-    // DynamicSection *dynamic;
+    DynamicSection *dynamic;
     StrtabSection *strtab;
     DynsymSection *dynsym;
     EhFrameSection *eh_frame;
@@ -290,11 +312,13 @@ typedef struct {
     vector symbols;
 } Thunk;
 
+
 #include "filetype.h"
 #include "input_file.h"
 #include "cmdline.h"
 #include "hashmap.h"
 #include "elf_symbol.h"
+#include "output-file-unix.h"
 
 static inline i64 get_shndx(ElfSym *esym) {
     if (*esym->st_shndx.val == SHN_XINDEX)
@@ -340,6 +364,26 @@ void obj_compute_symtab_size(Context *ctx,ObjectFile *file);
 void create_output_symtab(Context *ctx);
 void compute_section_headers(Context *ctx);
 void output_phdr_update_shdr(Context *ctx,Chunk *chunk);
+i64 to_phdr_flags(Context *ctx, Chunk *chunk);
+
+void output_phdr_update_shdr(Context *ctx,Chunk *chunk);
+void reldyn_update_shdr(Context *ctx,Chunk *chunk);
+void strtab_update_shdr(Context *ctx,Chunk *chunk);
+void shstrtab_update_shdr(Context *ctx,Chunk *chunk);
+void symtab_update_shdr(Context *ctx,Chunk *chunk);
+void gotplt_update_shdr(Context *ctx,Chunk *chunk);
+void plt_update_shdr(Context *ctx,Chunk *chunk);
+void relplt_update_shdr(Context *ctx,Chunk *chunk);
+void dynsym_update_shdr(Context *ctx,Chunk *chunk);
+void hash_update_shdr(Context *ctx,Chunk *chunk);
+void gnu_hash_update_shdr(Context *ctx,Chunk *chunk);
+void eh_frame_hdr_update_shdr(Context *ctx,Chunk *chunk);
+void gnu_version_update_shdr(Context *ctx,Chunk *chunk);
+void gnu_version_r_update_shdr(Context *ctx,Chunk *chunk);
+
+void fix_synthetic_symbols(Context *ctx);
+i64 set_osec_offsets(Context *ctx);
+void copy_chunks(Context *ctx);
 // 获取输入input_section
 static inline ElfShdr *get_shdr(ObjectFile *file,int shndx) {
   if (shndx < file->inputfile.elf_sections_num)
@@ -441,6 +485,12 @@ static inline OutputSection *output_find_section(Context *ctx,u32 sh_type) {
 
 static inline u64 to_plt_offset(i32 pltidx) {
     return target.plt_hdr_size + pltidx * target.plt_size;
+}
+
+static inline ChunkKind kind(Chunk *chunk) {
+    if (chunk->is_outsec)
+        return OUTPUT_SECTION;
+    return SYNTHETIC;
 }
 #endif  // 结束头文件保护
 

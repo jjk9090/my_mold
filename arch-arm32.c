@@ -6,7 +6,7 @@ void isec_scan_relocations(Context *ctx,ObjectFile *file,int i,InputSection *ise
 
     // Scan relocations
     for(i64 i = 0;i < rels.size;i++) {
-        ElfRel *rel = (ElfRel *)rels.data[i];
+        ElfRel *rel = (ElfRel *)(intptr_t)rels.data[i];
         if (rel->r_type == R_NONE) 
             continue;       
     }

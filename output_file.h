@@ -186,6 +186,10 @@ typedef struct {
     Chunk *chunk;
 } RelroPaddingSection;
 
+typedef struct {
+    /* data */
+    Chunk *chunk;
+} DynamicSection;
 
 
 

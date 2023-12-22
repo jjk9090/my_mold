@@ -266,6 +266,7 @@ i64 to_phdr_flags(Context *ctx, Chunk *chunk) {
     // All sections are put into a single RWX segment if --omagic
     if (ctx->arg.omagic)
         return PF_R | PF_W | PF_X;
+        
     bool write = (*chunk->shdr.sh_flags.val & SHF_WRITE);
     bool exec = (*chunk->shdr.sh_flags.val & SHF_EXECINSTR);
 
@@ -448,12 +449,6 @@ void strtab_update_shdr(Context *ctx,Chunk *chunk) {
         offset += file->inputfile.strtab_size;
     }
     *chunk->shdr.sh_size.val = (offset == 1) ? 0 : offset;
-}
-
-ChunkKind kind(Chunk *chunk) {
-    if (chunk->is_outsec)
-        return OUTPUT_SECTION;
-    return SYNTHETIC;
 }
 
 void shstrtab_update_shdr(Context *ctx,Chunk *chunk) {

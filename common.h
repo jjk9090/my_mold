@@ -1,6 +1,7 @@
 #ifndef COMMON_H  // 头文件保护，防止重复包含
 #define COMMON_H
 #include "mold.h"
+
 static inline void push_back(Context* ctx, ELFSymbol *value) {
     ctx->arg.undefined_count++;
     ELFSymbol **temp = (ELFSymbol **)malloc(ctx->arg.undefined_count * sizeof(ELFSymbol *));
@@ -32,5 +33,10 @@ static inline u64 align_to(u64 val, u64 align) {
         return val;
     assert(has_single_bit(align));
     return (val + align - 1) & ~(align - 1);
+}
+
+static inline u64 align_down(u64 val, u64 align) {
+    assert(has_single_bit(align));
+    return val & ~(align - 1);
 }
 #endif

@@ -162,6 +162,9 @@ int main(int argc, char **argv) {
     ctx.cmdline_args = expand_response_files(&ctx,argv);
     ctx.file_priority = 10000;
     ctx.default_version = VER_NDX_UNSPECIFIED;
+    ctx.dtp_addr = 0;
+    ctx.overwrite_output_file = true;
+
     ctx.arg.relocatable = false;
     ctx.arg.oformat_binary = false;
     ctx.arg.relocatable_merge_sections = false;
@@ -180,7 +183,11 @@ int main(int argc, char **argv) {
     ctx.arg.omagic = false;
     ctx.arg.rosegment = true;
     ctx.arg.z_stack_size = 0;
+    ctx.arg.image_base = 0x200000;
     ctx.merged_sections_count = 0;
+    ctx.arg.execute_only = false;
+    ctx.arg.nmagic = false;
+    ctx.arg.filler = -1;
 
     init_context(&ctx);
     
@@ -200,7 +207,7 @@ int main(int argc, char **argv) {
     read_input_files(&ctx, file_args);
 
     ctx.page_size = target.page_size;
-    
+
     if (!ctx.arg.relocatable)
         create_internal_file(&ctx);
     
@@ -250,5 +257,17 @@ int main(int argc, char **argv) {
     // Compute the section header values for all sections.
     compute_section_headers(&ctx);
 
+    // Assign offsets to output sections
+    i64 filesize = set_osec_offsets(&ctx);
+
+    // Set actual addresses to linker-synthesized symbols.
+    fix_synthetic_symbols(&ctx);
+
+    // Create an output file
+    (&ctx)->output_file = output_open(&ctx, ctx.arg.output, filesize, 0777);
+    ctx.buf = ctx.output_file->buf;
+
+    // Copy input sections to the output file and apply relocations.
+    copy_chunks(&ctx);
     return 0;
 }
