@@ -127,7 +127,7 @@ void assign_offsets(Context *ctx,MergedSection *sec) {
         i64 a = *((i64 *)(sec->shard_offsets.data[i - 1]));
         i64 b = *((i64 *)(sizes.data[i - 1]));
         *((i64 *)(sec->shard_offsets.data[i])) = align_to(a + b,alignment);
-        printf("%ld\n",*((i64 *)(sec->shard_offsets.data[i])));
+        // printf("%ld\n",*((i64 *)(sec->shard_offsets.data[i])));
     }
     i = 0;
     printf("%ld\n",*((i64 *)(sec->shard_offsets.data[2])));

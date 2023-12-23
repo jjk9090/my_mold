@@ -270,14 +270,13 @@ int main(int argc, char **argv) {
     // Create an output file
     (&ctx)->output_file = output_open(&ctx, ctx.arg.output, filesize, 0777);
     ctx.buf = ctx.output_file->buf;
-
     // Copy input sections to the output file and apply relocations.
     copy_chunks(&ctx);
 
     out_file_close(&ctx,(&ctx)->output_file);
 
-    // if (ctx.arg.quick_exit)
-    //     _exit(0);
+    if (ctx.arg.quick_exit)
+        _exit(0);
 
     return 0;
 }

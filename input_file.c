@@ -218,7 +218,7 @@ void initialize_sections(Context *ctx,ObjectFile *file) {
                     }
                     continue;
                 }
-                printf("???%s\n",name);
+                // printf("???%s\n",name);
                 file->sections[i]->contents = (StringView *)malloc(sizeof(StringView));
                 file->sections[i]->is_constucted = true;
                 define_input_section(file,ctx,i);              
@@ -261,7 +261,7 @@ void initialize_symbols (Context *ctx,ObjectFile *obj) {
         } else {
             name = (char *)(symbol_strtab.data + *esym->st_name.val);
         }
-        printf("%s\n",name);
+        // printf("%s\n",name);
         ELFSymbol *sym2 = (ELFSymbol *)malloc(sizeof(ELFSymbol));
         sym_init(sym2);
         sym2->file = obj;

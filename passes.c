@@ -617,7 +617,6 @@ void create_output_sections(Context *ctx) {
             out_sec_insert_element(output_section_map,key,osec);
             VectorAdd(&(ctx->osec_pool),osec,sizeof(OutputSection *));
             isec->output_section = osec;
-            printf("wait ...\n");
         }
     }
     // Add input sections to output sections
@@ -670,7 +669,7 @@ void create_output_sections(Context *ctx) {
     for (int i = 0; i < chunks.size; i++) {
         // 获取当前元素
         Chunk* currentElement = temp2[i];
-        printf("name: %s\n", currentElement->name);
+        // printf("name: %s\n", currentElement->name);
         // 将chunks加入ctx->chunks
         // VectorAdd(&(ctx->chunks),ctx->phdr->chunk,sizeof(Chunk *));
         VectorAdd(&(ctx->chunks),temp2[i],(sizeof(Chunk *)));
@@ -679,7 +678,7 @@ void create_output_sections(Context *ctx) {
     for (int i = 0; i < ctx->chunks.size; i++) {
         // 获取当前元素
         Chunk* currentElement = ctx->chunks.data[i];
-        printf("name: %s\n", currentElement->name);
+        // printf("name: %s\n", currentElement->name);
     } 
 }
 
@@ -1034,7 +1033,7 @@ void sort_output_sections_regular(Context *ctx) {
     for (int i = 0; i < size; i++) {
         // 获取当前元素
         Chunk* currentElement = ctx->chunks.data[i];
-        printf("finalname: %s\n", currentElement->name);
+        // printf("finalname: %s\n", currentElement->name);
     } 
     // ctx->chunks.data = NULL;
     // VectorNew(&(ctx->chunks),1);

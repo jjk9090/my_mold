@@ -15,7 +15,6 @@ CMakeFiles/mymold.dir/arch-arm32.c.o: ../integers.h
 CMakeFiles/mymold.dir/arch-arm32.c.o: ../mapped_file.h
 CMakeFiles/mymold.dir/arch-arm32.c.o: ../mold.h
 CMakeFiles/mymold.dir/arch-arm32.c.o: ../new_vector.h
-CMakeFiles/mymold.dir/arch-arm32.c.o: ../output-file-unix.h
 CMakeFiles/mymold.dir/arch-arm32.c.o: ../output_file.h
 CMakeFiles/mymold.dir/arch-arm32.c.o: ../symbol.h
 
@@ -51,7 +50,6 @@ CMakeFiles/mymold.dir/input_sections.c.o: ../integers.h
 CMakeFiles/mymold.dir/input_sections.c.o: ../mapped_file.h
 CMakeFiles/mymold.dir/input_sections.c.o: ../mold.h
 CMakeFiles/mymold.dir/input_sections.c.o: ../new_vector.h
-CMakeFiles/mymold.dir/input_sections.c.o: ../output-file-unix.h
 CMakeFiles/mymold.dir/input_sections.c.o: ../output_file.h
 CMakeFiles/mymold.dir/input_sections.c.o: ../symbol.h
 
@@ -123,7 +121,6 @@ CMakeFiles/mymold.dir/thunks.c.o: ../integers.h
 CMakeFiles/mymold.dir/thunks.c.o: ../mapped_file.h
 CMakeFiles/mymold.dir/thunks.c.o: ../mold.h
 CMakeFiles/mymold.dir/thunks.c.o: ../new_vector.h
-CMakeFiles/mymold.dir/thunks.c.o: ../output-file-unix.h
 CMakeFiles/mymold.dir/thunks.c.o: ../output_file.h
 CMakeFiles/mymold.dir/thunks.c.o: ../symbol.h
 CMakeFiles/mymold.dir/thunks.c.o: ../thunks.c

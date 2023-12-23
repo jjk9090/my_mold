@@ -16,7 +16,6 @@ CMakeFiles/mymold.dir/arch-arm32.c.o
  /home/jjk/project/mold2/my_mold/mapped_file.h
  /home/jjk/project/mold2/my_mold/mold.h
  /home/jjk/project/mold2/my_mold/new_vector.h
- /home/jjk/project/mold2/my_mold/output-file-unix.h
  /home/jjk/project/mold2/my_mold/output_file.h
  /home/jjk/project/mold2/my_mold/symbol.h
 CMakeFiles/mymold.dir/input_file.c.o
@@ -52,7 +51,6 @@ CMakeFiles/mymold.dir/input_sections.c.o
  /home/jjk/project/mold2/my_mold/mapped_file.h
  /home/jjk/project/mold2/my_mold/mold.h
  /home/jjk/project/mold2/my_mold/new_vector.h
- /home/jjk/project/mold2/my_mold/output-file-unix.h
  /home/jjk/project/mold2/my_mold/output_file.h
  /home/jjk/project/mold2/my_mold/symbol.h
 CMakeFiles/mymold.dir/main.c.o
@@ -124,7 +122,6 @@ CMakeFiles/mymold.dir/thunks.c.o
  /home/jjk/project/mold2/my_mold/mapped_file.h
  /home/jjk/project/mold2/my_mold/mold.h
  /home/jjk/project/mold2/my_mold/new_vector.h
- /home/jjk/project/mold2/my_mold/output-file-unix.h
  /home/jjk/project/mold2/my_mold/output_file.h
  /home/jjk/project/mold2/my_mold/symbol.h
  /home/jjk/project/mold2/my_mold/thunks.c
