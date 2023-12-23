@@ -87,7 +87,7 @@ void create_range_extension_thunks(Context *ctx,OutputSection *osec) {
         }
 
         assert(thunk_size(thunk) < max_thunk_size);
-
+        offset += thunk_size(thunk);
         // Sort symbols added to the thunk to make the output deterministic.
         // 暂时没有
         // Assign offsets within the thunk to the symbols.
@@ -96,11 +96,11 @@ void create_range_extension_thunks(Context *ctx,OutputSection *osec) {
     }
     while (t < osec->thunks.size)
         reset_thunk(osec->thunks.data[t++]);
-    *osec->chunk->shdr.sh_size.val = offset;
+    *(u32 *)&(osec->chunk->shdr.sh_size) = offset;
 
     for (int i = 0;i < osec->member.size;i++) {
         InputSection *isec = (InputSection *)osec->member.data[i];
-        *osec->chunk->shdr.sh_addralign.val = 
-            *osec->chunk->shdr.sh_addralign.val > 1 << isec->p2align ? *osec->chunk->shdr.sh_addralign.val : 1 << isec->p2align;
+        *(u32 *)&(osec->chunk->shdr.sh_addralign) = 
+            *(u32 *)&(osec->chunk->shdr.sh_addralign) > 1 << isec->p2align ? *(u32 *)&(osec->chunk->shdr.sh_addralign) : 1 << isec->p2align;
     }
 }

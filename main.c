@@ -6,6 +6,7 @@ ARM32 target;
 StringView get_string(Context *ctx, ElfShdr *shdr) {
     // printf("%ld\n",sizeof(shdr->sh_offset.val));
     uint16_t value = 0;
+    // value = shdr->sh_offset.value;
     value = (shdr->sh_offset.val[3] << 24)| (shdr->sh_offset.val[2] << 16) | (shdr->sh_offset.val[1] << 8) | shdr->sh_offset.val[0];
     // 0x7ffff7fc80a8 "" begin
     // // 将 value 格式化为十六进制字节
@@ -183,11 +184,13 @@ int main(int argc, char **argv) {
     ctx.arg.omagic = false;
     ctx.arg.rosegment = true;
     ctx.arg.z_stack_size = 0;
+    // u64 image_base = 0x200000;
     ctx.arg.image_base = 0x200000;
     ctx.merged_sections_count = 0;
     ctx.arg.execute_only = false;
     ctx.arg.nmagic = false;
     ctx.arg.filler = -1;
+    ctx.arg.pic = false;
 
     init_context(&ctx);
     
@@ -238,7 +241,7 @@ int main(int argc, char **argv) {
     scan_relocations(&ctx);
 
     // Compute sizes of output sections while assigning offsets
-    // within an output section to input sections.
+    // within an output section to input sections.  size
     compute_section_sizes(&ctx);
 
     sort_output_sections(&ctx);

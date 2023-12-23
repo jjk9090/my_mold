@@ -22,7 +22,7 @@ char *get_output_name(Context *ctx, char *name, u64 flags) {
         ".text.hot.", ".text.unknown.", ".text.unlikely.", ".text.startup.",
         ".text.exit."
         };
-        for (int i = 0;;i++) {
+        for (int i = 0;i < 5;i++) {
             char *stem = prefixes[i];
             if (stem == NULL) 
                 break;
@@ -97,13 +97,14 @@ void create_internal_file(Context *ctx) {
     obj->inputfile.is_alive = true;
     obj->inputfile.priority = 1;
     obj->inputfile.filename = strdup("<internal>");
-    obj->inputfile.elf_syms = (ElfSym **)(ctx->internal_esyms.data);
+    
     resize(&(obj->has_symver), ctx->internal_esyms.size);
 
-    VectorNew(&(ctx->objs),1);
+    // VectorNew(&(ctx->objs),1);
     VectorAdd(&(ctx->objs),obj,sizeof(ObjectFile *));
     VectorAdd(&(ctx->internal_esyms),elfsym,sizeof(ElfSym *));
-
+    VectorNew(&(obj->inputfile.elf_syms),1);
+    obj->inputfile.elf_syms = ctx->internal_esyms;
     ObjectFile *file = *((ObjectFile**)(ctx->objs.data) + 1);
 }
 
@@ -232,7 +233,8 @@ OutputShdr *create_section_order_s(u32 sh_flags) {
     OutputShdr *out_endr = (OutputShdr *)malloc(sizeof(OutputShdr)) ;
     out_endr->chunk = (Chunk *)malloc(sizeof(Chunk));
     out_endr->chunk->name = strdup("SHDR");
-    *out_endr->chunk->shdr.sh_flags.val = sh_flags;
+    // *out_endr->chunk->shdr.sh_flags.val = sh_flags;
+    *out_endr->chunk->shdr.sh_size.val = 1;
     *out_endr->chunk->shdr.sh_addralign.val = sizeof(Word);
     return out_endr;
 }
@@ -556,6 +558,7 @@ OutputSection *create_a_output_sections(Context *ctx,char *name,u32 type, u64 fl
     output_section->chunk->num_local_symtab = 0;
     output_section->chunk->strtab_size = 0;
     output_section->chunk->strtab_offset = 0;
+    output_section->chunk->is_outsec = true;
     return output_section;
 }
 
@@ -625,6 +628,7 @@ void create_output_sections(Context *ctx) {
         temp->chunk->is_outsec = 1;
         temp->chunk->outsec = (OutputSection *)malloc(sizeof(OutputSection));
         temp->chunk->outsec = temp;
+        temp->chunk->is_outsec = true;
         VectorAdd(&chunks,temp->chunk,sizeof(Chunk *));
         // VectorAdd(&(ctx->chunks),temp->chunk,sizeof(Chunk *));
     }
@@ -694,8 +698,14 @@ void resolve_section_pieces(Context *ctx) {
     }
 }
 
-ELFSymbol *add_sym(Context *ctx,ObjectFile *obj,char *name) {
-    u32 type = STT_NOTYPE;
+ELFSymbol *add_sym(Context *ctx,ObjectFile *obj,char *name,...) {
+    va_list args;
+    va_start(args, name);
+    u32 type;
+    if (va_arg(args, u32) == NULL)
+        type = STT_NOTYPE;
+    else
+        type = va_arg(args, u32);
     ElfSym *esym = (ElfSym *)malloc(sizeof(ElfSym));
     esym->st_type = type;
     // *esym->st_shndx.val = SHN_ABS;
@@ -707,7 +717,9 @@ ELFSymbol *add_sym(Context *ctx,ObjectFile *obj,char *name) {
     ELFSymbol *sym = insert_symbol(ctx,name,name);
     sym_init(sym);
     sym->value =  0xdeadbeef; // unique dummy value
+    sym->file = obj;
     VectorAdd(&(obj->symbols),sym,sizeof(ELFSymbol *));
+    va_end(args);
     return sym;
 }
 
@@ -763,6 +775,8 @@ void add_synthetic_symbols (Context *ctx) {
     if (ctx->arg.eh_frame_hdr)
         ctx->__GNU_EH_FRAME_HDR = add_sym(ctx,obj,"__GNU_EH_FRAME_HDR");
     
+    ctx->_TLS_MODULE_BASE_ = add_sym(ctx,obj,"_TLS_MODULE_BASE_", STT_TLS);
+
     if (!insert_symbol(ctx, "end","end")->file)
         ctx->end = add_sym(ctx,obj,"end");
     if (!insert_symbol(ctx, "etext","etext")->file)
@@ -796,11 +810,12 @@ void add_synthetic_symbols (Context *ctx) {
     }
 
     int size = ctx->internal_esyms.size;
-    obj->inputfile.elf_syms = (ElfSym **)malloc(sizeof(ElfSym *) * size);
+    // obj->inputfile.elf_syms = (ElfSym **)malloc(sizeof(ElfSym *) * size);
     // obj->inputfile.elf_syms = ctx->internal_esyms;
     for(int i = 0;i < size;i++) {
         ElfSym *temp = (ElfSym *)ctx->internal_esyms.data[i];
-        obj->inputfile.elf_syms[i] = (ElfSym *)ctx->internal_esyms.data[i];
+        VectorAdd(&(obj->inputfile.elf_syms),temp,sizeof(ElfSym *));
+        // obj->inputfile.elf_syms.data[i] = (ElfSym *)ctx->internal_esyms.data[i];
     }
     resize(&(obj->has_symver),size - 1);
     obj_resolve_symbols(ctx,obj);
@@ -830,7 +845,8 @@ static vector split(vector input, i64 unit) {
     if (remaining > 0) {
         vector tmp;
         VectorNew(&tmp, remaining);
-        memcpy(tmp.data, data, remaining * sizeof(void*));
+        VectorAdd(&tmp, data,sizeof(vector));
+        // memcpy(tmp->data, data, remaining * sizeof(void*));
         VectorAdd(&vec, &tmp, sizeof(vector*));
     }
     return vec;
@@ -844,12 +860,12 @@ typedef struct {
 } Group;
 
 void compute_section_sizes(Context *ctx) {
-    for(int i = 0;i<ctx->chunks.size;i++) {
+    for(int i = 0;i < ctx->chunks.size;i++) {
         OutputSection *osec = ((Chunk *)ctx->chunks.data[i])->outsec;
         if (!osec)
             continue;
         if (target.thunk_size) {
-            if ((*osec->chunk->shdr.sh_flags.val & SHF_EXECINSTR) || !ctx->arg.relocatable) {
+            if ((*(u32 *)&(osec->chunk->shdr.sh_flags) & SHF_EXECINSTR) && !ctx->arg.relocatable) {
                 continue;
             }
         }
@@ -858,15 +874,22 @@ void compute_section_sizes(Context *ctx) {
         VectorNew(&groups,1);
         vector split_result = split(osec->member, group_size);
         for (int j = 0;j < split_result.size;j++) {
-            vector *span = (vector *)split_result.data[i];
-            Group group = {.members = *span};
-            VectorAdd(&groups,&group,sizeof(Group *));
+            vector *span = (vector *)split_result.data[j];
+            Group *group = (Group *)malloc(sizeof(Group));
+            // VectorNew(&(group->members),1);
+            group->members = *span;
+            group->offset = 0;
+            group->p2align = 0;
+            group->size = 0;
+            VectorAdd(&groups,group,sizeof(Group *));
         }
 
         for(int i = 0;i < groups.size;i++) {
             Group *group = (Group *)groups.data[i];
-            for(int j = 0;;j++) {
+            for(int j = 0;j < group->members.size;j++) {
                 InputSection *isec = (InputSection *)group->members.data[i];
+                if(isec == NULL)
+                    break;
                 group->size = align_to(group->size, 1 << isec->p2align) + isec->sh_size;
                 group->p2align = group->p2align > isec->p2align ? group->p2align : isec->p2align;
             }           
@@ -877,10 +900,10 @@ void compute_section_sizes(Context *ctx) {
 
         for (i64 i = 0; i < groups.size; i++) {
             Group *group = (Group *)groups.data[i];
-            *shdr->sh_size.val = align_to(*shdr->sh_size.val, 1 << group->p2align);
-            group->offset = *shdr->sh_size.val;
-            *shdr->sh_size.val += group->size;
-            *shdr->sh_addralign.val = *shdr->sh_addralign.val > 1 << group->p2align ? *shdr->sh_addralign.val : 1 << group->p2align;
+            *(u32 *)&(shdr->sh_size) = align_to(*(u32 *)&(shdr->sh_size), 1 << group->p2align);
+            group->offset = *(u32 *)&(shdr->sh_size);
+            *(u32 *)&(shdr->sh_size) += group->size;
+            *(u32 *)&(shdr->sh_addralign) = *(u32 *)&(shdr->sh_addralign) > 1 << group->p2align ? *(u32 *)&(shdr->sh_addralign) : 1 << group->p2align;
         }
 
         // Assign offsets to input sections.
@@ -894,6 +917,7 @@ void compute_section_sizes(Context *ctx) {
                 offset += isec->sh_size;
             }
         }
+
     }
 
     // 对ARM处理
@@ -905,7 +929,7 @@ void compute_section_sizes(Context *ctx) {
                 
                 if (!osec)
                     continue;
-                if (*osec->chunk->shdr.sh_flags.val & SHF_EXECINSTR)
+                if (*(u32 *)&(osec->chunk->shdr.sh_flags) & SHF_EXECINSTR)
                     create_range_extension_thunks(ctx,osec);
             }
         }
@@ -1089,8 +1113,11 @@ void compute_section_headers(Context *ctx) {
     // Remove empty chunks.
     for (int i = 0; i < ctx->chunks.size; ) {
         Chunk *chunk = ctx->chunks.data[i];
-        if (kind(chunk) != OUTPUT_SECTION  &&
-            *chunk->shdr.sh_size.val == 0) {
+        if(i == ctx->chunks.size - 1) {
+            printf("SHDR\n");
+        }
+        u32 *size = (u32 *)&(chunk->shdr.sh_size);
+        if (kind(chunk) != OUTPUT_SECTION  & *size == 0) {
             // 删除当前元素
             free(chunk);
             for (int j = i; j < ctx->chunks.size - 1; j++) {
@@ -1109,7 +1136,7 @@ void compute_section_headers(Context *ctx) {
             ((Chunk *)ctx->chunks.data[i])->shndx = shndx++;
     
     if(ctx->shdr)
-        *ctx->shdr->chunk->shdr.sh_size.val = shndx * sizeof(ElfShdr);
+        *(u32 *)&(ctx->shdr->chunk->shdr.sh_size) = shndx * sizeof(ElfShdr);
 
     update_shdr(ctx);  
 }
@@ -1132,25 +1159,26 @@ void set_virtual_addresses_regular (Context *ctx) {
     u64 tls_alignment = 1;
     for(int i = 0;i < chunks.size;i++) {
         Chunk *chunk = chunks.data[i];
-        if(*chunk->shdr.sh_flags.val & SHF_TLS) {
+        if(*(u32 *)&(chunk->shdr.sh_flags) & SHF_TLS) {
             if(!first_tls_chunk)
                 first_tls_chunk = chunk;
-            tls_alignment = tls_alignment > (u64)(*chunk->shdr.sh_addralign.val) ? tls_alignment : (u64)(*chunk->shdr.sh_addralign.val);
+            tls_alignment = tls_alignment > *(u32 *)&(chunk->shdr.sh_addralign) ? tls_alignment : *(u32 *)&(chunk->shdr.sh_addralign);
         }
     }
 
     for(i64 i = 0;i < chunks.size;i++) {
-        if(!(*((Chunk *)chunks.data[i])->shdr.sh_flags.val & SHF_ALLOC))
+        Chunk *chunk = (Chunk *)chunks.data[i];
+        if(!(*(u32 *)&(chunk->shdr.sh_flags) & SHF_ALLOC))
             continue;
 
-        if(chunks.data[i] == ctx->relro_padding) {
-            *((Chunk *)chunks.data[i])->shdr.sh_addr.val = addr;
-            *((Chunk *)chunks.data[i])->shdr.sh_size.val = align_to(addr,ctx->page_size);
+        if(chunks.data[i] == ctx->relro_padding->chunk) {
+            *(u32 *)&(chunk->shdr.sh_addr) = addr;
+            *(u32 *)&(chunk->shdr.sh_size) = align_to(addr,ctx->page_size) - addr;
             addr += ctx->page_size;
             continue;
         }
 
-        if (i > 0 && chunks.data[i - 1] != ctx->relro_padding) {
+        if (i > 0 && chunks.data[i - 1] != ctx->relro_padding->chunk) {
             i64 flags1 = get_flags(ctx,chunks.data[i - 1]);
             i64 flags2 = get_flags(ctx,chunks.data[i]);
 
@@ -1174,10 +1202,11 @@ void set_virtual_addresses_regular (Context *ctx) {
             }
         }
 
-        u64 res = chunks.data[i] == first_tls_chunk ? tls_alignment : (u64)(*((Chunk *)chunks.data[i])->shdr.sh_addralign.val);
+        u64 res = chunks.data[i] == first_tls_chunk ? tls_alignment : *(u32 *)&(chunk->shdr.sh_addralign);
         addr = align_to(addr, res);
-        *((Chunk *)chunks.data[i])->shdr.sh_addr.val = addr;
-        addr += *((Chunk *)chunks.data[i])->shdr.sh_size.val;
+        // *((Chunk *)chunks.data[i])->shdr.sh_addr.val = addr;
+        *(u32 *)&(((Chunk *)chunks.data[i])->shdr.sh_addr) = addr;
+        addr += *(u32 *)&(((Chunk *)chunks.data[i])->shdr.sh_size);
     }
 }
 
@@ -1192,57 +1221,62 @@ i64 set_file_offsets(Context *ctx) {
     i64 i = 0;
     while(i < chunks.size) {
         Chunk *first = chunks.data[i];
-
-        if(!(*first->shdr.sh_flags.val & SHF_ALLOC)) {
-            fileoff = align_to(fileoff,*first->shdr.sh_addralign.val);
-            *first->shdr.sh_offset.val = fileoff;
-            fileoff += *first->shdr.sh_size.val;
+        
+        if(!(*(u32 *)&(first->shdr.sh_flags) & SHF_ALLOC)) {
+            fileoff = align_to(fileoff,*(u32 *)(&(first->shdr.sh_addralign)));
+            *(u32 *)(&(first->shdr.sh_offset)) = fileoff;
+            fileoff += *(u32 *)(&(first->shdr.sh_size));
             i++;
             continue;
         }
-        if (*first->shdr.sh_type.val == SHT_NOBITS) {
+        if (*(u32 *)&(first->shdr.sh_type) == SHT_NOBITS) {
             i++;
             continue;
         }
 
-        if(*first->shdr.sh_addralign.val > ctx->page_size)
-            fileoff = align_to(fileoff,*first->shdr.sh_addralign.val);
+        if(*(u32 *)(&(first->shdr.sh_addralign)) > ctx->page_size)
+            fileoff = align_to(fileoff,*(u32 *)(&(first->shdr.sh_addralign)));
         else
-            fileoff = align_with_skew(fileoff,ctx->page_size,*first->shdr.sh_addr.val);
+            fileoff = align_with_skew(fileoff,ctx->page_size,*(u32 *)(&(first->shdr.sh_addr)));
         
         // 分配ALLOC段连续的文件偏移量 在内存中是连续的
+        Chunk *front = chunks.data[i - 1];
+        Chunk *back = chunks.data[i];
         for(;;) {
-            *((Chunk *)chunks.data[i])->shdr.sh_offset.val = fileoff + *((Chunk *)chunks.data[i])->shdr.sh_addr.val - *first->shdr.sh_addr.val;
+            *(u32 *)&(back->shdr.sh_offset) = fileoff + *(u32 *)&(back->shdr.sh_addr) - *(u32 *)&(first->shdr.sh_addr);
             i++;
+            front = chunks.data[i - 1];
+            back = chunks.data[i];
 
             if(i >= chunks.size ||
-                !(*((Chunk *)chunks.data[i])->shdr.sh_flags.val & SHF_ALLOC) ||
-                *((Chunk *)chunks.data[i])->shdr.sh_type.val == SHT_NOBITS)
+                !(*(u32 *)&(back->shdr.sh_flags) & SHF_ALLOC) ||
+                (*(u32 *)&(back->shdr.sh_type)) == SHT_NOBITS)
                 break;
             
-            if (*((Chunk *)chunks.data[i])->shdr.sh_addr.val < *first->shdr.sh_addr.val)
+            if (*(u32 *)&(back->shdr.sh_addr) < *(u32 *)&(first->shdr.sh_addr))
                 break;
             
-            i64 gap_size = *((Chunk *)chunks.data[i])->shdr.sh_addr.val - *((Chunk *)chunks.data[i - 1])->shdr.sh_addr.val -
-                            *((Chunk *)chunks.data[i - 1])->shdr.sh_size.val;
+            i64 gap_size = *(u32 *)&(back->shdr.sh_addr) - *(u32 *)&(front->shdr.sh_addr) -
+                            *(u32 *)&(front->shdr.sh_size);
             
             if (gap_size >= ctx->page_size)
                 break;
         }
-
-        fileoff = *((Chunk *)chunks.data[i - 1])->shdr.sh_offset.val + *((Chunk *)chunks.data[i - 1])->shdr.sh_size.val;
+        fileoff = *(u32 *)&(front->shdr.sh_offset) + *(u32 *)&(front->shdr.sh_size);
 
         while(i < chunks.size &&
-            (*((Chunk *)chunks.data[i])->shdr.sh_flags.val &  SHF_ALLOC) &&
-            *((Chunk *)chunks.data[i])->shdr.sh_type.val == SHT_NOBITS)
-            i++;
+            (*(u32 *)&(back->shdr.sh_flags) &  SHF_ALLOC) &&
+            *(u32 *)&(back->shdr.sh_type) == SHT_NOBITS) {
+                i++;
+                back = chunks.data[i];
+        }
     } 
     return fileoff;
 }
 
 i64 set_osec_offsets(Context *ctx) {
     for (;;) {
-        // 设置段的虚拟地址
+        // 设置段的虚拟地址 addr
         if (ctx->arg.section_order.size == 0)
             set_virtual_addresses_regular(ctx);
 
@@ -1362,7 +1396,16 @@ void fix_synthetic_symbols(Context *ctx) {
 
 }
 
+void copy(Chunk *chunk,Context *ctx) {
+    char *name = chunk->name == NULL ? "(header)" : chunk->name;
+    if(!strcmp(chunk->name,"EHDR"))
+        ehdr_copy_buf(ctx,chunk);
+}
 void copy_chunks(Context *ctx) {
-    
+    for(int i = 0;i < ctx->chunks.size;i++) {
+        Chunk *chunk = ctx->chunks.data[i];
+        if(*chunk->shdr.sh_type.val != SHT_REL)
+            copy(chunk,ctx);
+    }
 }
 

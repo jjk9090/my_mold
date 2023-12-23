@@ -13,8 +13,8 @@ static inline ELFSymbol *sym_init(ELFSymbol* sym) {
     sym->file = (ObjectFile *)malloc(sizeof(ObjectFile));
     sym->origin = 0;
     sym->value = 0;
-    sym->nameptr = NULL;
-    sym->namelen = 0;
+    // sym->nameptr = NULL;
+    // sym->namelen = 0;
     sym->sym_idx = -1;
     sym->aux_idx = -1;
     sym->ver_idx = VER_NDX_UNSPECIFIED;

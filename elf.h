@@ -291,6 +291,16 @@ enum {
     PF_R = 4,
 };
 
+enum {
+    EV_CURRENT = 1,
+};
+
+enum {
+    EF_ARM_ABI_FLOAT_SOFT = 0x00000200,
+    EF_ARM_ABI_FLOAT_HARD = 0x00000400,
+    EF_ARM_EABI_VER5 = 0x05000000,
+};
+
 typedef struct  {
     char *target_name;
     bool is_64;
@@ -335,6 +345,7 @@ typedef struct {
 // 定义 Word 类型
 typedef struct {
     u8 val[4];
+    // u32 value;
 } Word;
 
 typedef struct  {

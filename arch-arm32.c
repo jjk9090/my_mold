@@ -11,3 +11,7 @@ void isec_scan_relocations(Context *ctx,ObjectFile *file,int i,InputSection *ise
             continue;       
     }
 }
+
+u64 get_eflags(Context *ctx) {
+  return EF_ARM_EABI_VER5;
+}

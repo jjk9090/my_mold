@@ -10,6 +10,7 @@
 #include <string.h>
 #include <stdint.h>
 #include <assert.h>
+#include <stdarg.h>
 
 typedef struct Context Context;
 typedef struct StringView{
@@ -69,7 +70,7 @@ typedef struct
 
     ElfShdr **elf_sections;    
     int elf_sections_num;
-    ElfSym **elf_syms;
+    vector elf_syms;
     int elf_syms_num;
     MappedFile *inputfile_mf;
     StringView symbol_strtab;
@@ -197,6 +198,7 @@ struct Context {
         bool rosegment;
         bool execute_only;
         bool nmagic;
+        bool pic;
         vector retain_symbols_file;
         vector section_order;
 
@@ -384,6 +386,8 @@ void gnu_version_r_update_shdr(Context *ctx,Chunk *chunk);
 void fix_synthetic_symbols(Context *ctx);
 i64 set_osec_offsets(Context *ctx);
 void copy_chunks(Context *ctx);
+void ehdr_copy_buf(Context *ctx,Chunk *chunk);
+u64 get_eflags(Context *ctx);
 // 获取输入input_section
 static inline ElfShdr *get_shdr(ObjectFile *file,int shndx) {
   if (shndx < file->inputfile.elf_sections_num)
@@ -413,7 +417,7 @@ static inline InputSection *get_section(ElfSym *esym,ObjectFile *obj) {
 }
 
 static inline ElfSym *esym(Inputefile *file,int sym_idx) {
-  return file->elf_syms[sym_idx];
+  return file->elf_syms.data[sym_idx];
 }
 
 static inline void set_input_section(InputSection *isec,ELFSymbol *sym) {
@@ -455,9 +459,11 @@ static inline InputSection *elfsym_get_input_section(ELFSymbol *sym){
 }
 
 static inline u32 elfsym_get_type(ObjectFile *file,int i){
-  if (esym(&(file->inputfile),i)->st_type == STT_GNU_IFUNC && file->inputfile.is_dso)
-    return STT_FUNC;
-  return esym(&(file->inputfile),i)->st_type;
+    ElfSym *sym= esym(&(file->inputfile),i);
+    if (sym && sym->st_type == STT_GNU_IFUNC && file->inputfile.is_dso)
+        return STT_FUNC;
+    if(sym)
+        return esym(&(file->inputfile),i)->st_type;
 }
 
 static inline SectionFragment *get_frag(ELFSymbol *sym) {
@@ -483,11 +489,24 @@ static inline OutputSection *output_find_section(Context *ctx,u32 sh_type) {
     return NULL;
 }
 
+static inline OutputSection *output_find_section_with_name(Context *ctx,char *name) {
+    for (i64 i = 0;i < ctx->chunks.size;i++) {
+        Chunk *chunk = ctx->chunks.data[i];
+        OutputSection *osec = chunk->outsec;
+        if (osec)
+            if (!strcmp(osec->chunk->name,name))
+                return osec;
+    }      
+    return NULL;
+}
+
 static inline u64 to_plt_offset(i32 pltidx) {
     return target.plt_hdr_size + pltidx * target.plt_size;
 }
 
 static inline ChunkKind kind(Chunk *chunk) {
+    if(!strcmp(chunk->name,"EHDR") || !strcmp(chunk->name,"PHDR") || !strcmp(chunk->name,"SHDR"))
+        return HEADER;
     if (chunk->is_outsec)
         return OUTPUT_SECTION;
     return SYNTHETIC;

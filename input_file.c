@@ -266,9 +266,11 @@ void initialize_symbols (Context *ctx,ObjectFile *obj) {
         sym_init(sym2);
         sym2->file = obj;
         sym2->nameptr = strdup(name);
+        sym2->namelen = strlen(name);
         sym2->value = (u64)(esym->st_value.val);
         sym2->sym_idx = i - 1;
         VectorAdd(&local_syms,sym2,sizeof(ELFSymbol *));
+        VectorAdd(&(obj->inputfile.elf_syms),esym,sizeof(ElfSym *));
         // Vectorpush_back(&local_syms,&sym2);
     }
     VectorNew(&(obj->inputfile.local_syms),10);
@@ -292,10 +294,12 @@ void initialize_symbols (Context *ctx,ObjectFile *obj) {
         char *name = key;
         ELFSymbol *symbol = insert_symbol(ctx,key,name);
         sym_init(symbol);
+        symbol->file = obj;
         VectorAdd(&symbols,symbol,sizeof(ELFSymbol *));
     }
     obj->inputfile.symbols = symbols;
     obj->symbols = symbols;
+    
 }
 
 void parse(Context *ctx,ObjectFile *obj) {
@@ -308,7 +312,10 @@ void parse(Context *ctx,ObjectFile *obj) {
         // ElfSym* elf_syms;
         // assignStringView(&view, &elf_syms); 
         elf_syms = (ElfSym **)view.data;
-        obj->inputfile.elf_syms = (ElfSym **)view.data; 
+        size_t size = view.size / sizeof(ElfSym);
+        VectorNew(&(obj->inputfile.elf_syms),size);
+        
+        // obj->inputfile.elf_syms = (ElfSym **)view.data; 
         // validateElfSyms(elf_syms, view.size / sizeof(ElfSym));
         // 0x7ffff7fc70b8 0x7ffff7fc70a8
         i64 idx = *(obj->symtab_sec)->sh_link.val;
@@ -524,6 +531,7 @@ void file_resolve_section_pieces(Context *ctx,ObjectFile *file) {
             break;
         if (m) {
             VectorNew(&(m->fragments),m->strings.size);
+            printf("%s\n",((StringView *)(m->strings.data[0]))->data);
             printf("%s\n",((StringView *)(m->strings.data[1]))->data);
             for(i64 i = 0;i < m->strings.size;i++) {
                 StringView *temp = (StringView *)m->strings.data;
@@ -539,7 +547,7 @@ void file_resolve_section_pieces(Context *ctx,ObjectFile *file) {
         if (file->inputfile.symbols.data == NULL)
             break;
         ELFSymbol *sym = (ELFSymbol *)file->inputfile.symbols.data[i];
-        ElfSym *esym = file->inputfile.elf_syms[i];
+        ElfSym *esym = file->inputfile.elf_syms.data[i];
         if (esym == NULL)
             break;
         if (is_abs(esym) || is_common(esym) || is_undef(esym))
@@ -590,7 +598,7 @@ void file_resolve_section_pieces(Context *ctx,ObjectFile *file) {
 void obj_resolve_symbols(Context *ctx,ObjectFile *obj) {
   for (i64 i = obj->inputfile.first_global; i < obj->inputfile.elf_syms_num; i++) {
     ELFSymbol *sym = obj->inputfile.symbols.data[i];
-    ElfSym *esym =  obj->inputfile.elf_syms[i];
+    ElfSym *esym =  obj->inputfile.elf_syms.data[i];
 
     if (is_undef(esym))
       continue;
@@ -660,12 +668,12 @@ bool is_alive(ELFSymbol *sym) {
 void obj_compute_symtab_size(Context *ctx,ObjectFile *file) {
     if(ctx->arg.strip_all)
         return;
-    VectorNew(&(file->inputfile.output_sym_indices),file->inputfile.elf_syms_num);
+    VectorNew(&(file->inputfile.output_sym_indices),file->inputfile.elf_syms.size);
     
     // Compute the size of local symbols
     if (!ctx->arg.discard_all && !ctx->arg.strip_all && !ctx->arg.retain_symbols_file.size) {
-        for(i64 i = 1;i < file->inputfile.first_global;i++) {
-            ELFSymbol *sym = file->symbols.data[i];
+        for(i64 i = 0;i + 1 < file->inputfile.first_global;i++) {
+            ELFSymbol *sym = file->symbols.data[i + 1];
 
             if (is_alive(sym) && should_write_to_local_symtab(ctx, sym,i,file)) {
                 file->inputfile.strtab_size += sym->namelen + 1;
@@ -678,9 +686,9 @@ void obj_compute_symtab_size(Context *ctx,ObjectFile *file) {
     }
 
     // Compute the size of global symbols.
-    for(i64 i = file->inputfile.first_global;i < file->inputfile.elf_syms_num;i++) {
+    for(i64 i = file->inputfile.first_global;i < file->inputfile.elf_syms.capacity;i++) {
         ELFSymbol *sym = file->symbols.data[i];
-        if (sym->file == file && is_alive(sym) && 
+        if (sym && sym->file == file && is_alive(sym) && 
             (!ctx->arg.retain_symbols_file.size || sym->write_to_symtab)) {
             file->inputfile.strtab_size += sym->namelen + 1;
             i32* cin = (i32*)malloc(sizeof(i32));

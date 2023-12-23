@@ -75,6 +75,8 @@ stdint.h
 -
 assert.h
 -
+stdarg.h
+-
 uthash.h
 /home/jjk/project/mold2/my_mold/uthash.h
 new_vector.h

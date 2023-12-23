@@ -28,6 +28,7 @@ MergedSection *MergedSection_create(char *name, i64 flags, i64 type,
     *osec->chunk->shdr.sh_flags.val = flags;
     *osec->chunk->shdr.sh_type.val = type;
     *osec->chunk->shdr.sh_entsize.val = entsize;
+    osec->map = NULL;
     return osec;
 }
 
@@ -189,14 +190,14 @@ void plt_sec_compute_symtab_size(Context *ctx,Chunk *chunk) {
 }
 
 void pltgot_sec_compute_symtab_size(Context *ctx,Chunk *chunk) {
-    chunk->num_local_symtab = chunk->pltsec->symbols.size;
+    chunk->num_local_symtab = chunk->pltgotsec->symbols.size;
     chunk->strtab_size = 0;
     for(int i = 0;i < chunk->pltgotsec->symbols.size;i++) {
-        ELFSymbol *sym = chunk->pltsec->symbols.data[i];
+        ELFSymbol *sym = chunk->pltgotsec->symbols.data[i];
         chunk->strtab_size += sym->namelen + sizeof("$pltgot");
     }
     if (!strcmp(target.target_name,"arm32"))
-        chunk->num_local_symtab += chunk->pltsec->symbols.size * 2;
+        chunk->num_local_symtab += chunk->pltgotsec->symbols.size * 2;
 }
 
 void got_sec_compute_symtab_size(Context *ctx,Chunk *chunk) {
@@ -406,8 +407,11 @@ vector create_phdr(Context *ctx) {
 void output_phdr_update_shdr(Context *ctx,Chunk *chunk) {
     // ElfPhdr
     ctx->phdr->phdrs = create_phdr(ctx);
-    *chunk->shdr.sh_size.val = ctx->phdr->phdrs.size * sizeof(ElfPhdr);
-
+    u32 s = ctx->phdr->phdrs.size * sizeof(ElfPhdr);
+    chunk->shdr.sh_size.val[0] = s & 0xFF;
+    chunk->shdr.sh_size.val[1] = (s >> 8) & 0xFF;
+    chunk->shdr.sh_size.val[2] = (s >> 16) & 0xFF;
+    chunk->shdr.sh_size.val[3] = (s >> 24) & 0xFF;
     // 剩下的貌似与线程有关 不写了
 }
 
@@ -448,14 +452,17 @@ void strtab_update_shdr(Context *ctx,Chunk *chunk) {
         file->inputfile.strtab_offset = offset;
         offset += file->inputfile.strtab_size;
     }
-    *chunk->shdr.sh_size.val = (offset == 1) ? 0 : offset;
+    *(u32 *)&(chunk->shdr.sh_size) = (offset == 1) ? 0 : offset;
 }
 
 void shstrtab_update_shdr(Context *ctx,Chunk *chunk) {
     i64 offset = 1;
     for(int i = 0;i < ctx->chunks.size;i++) {
-        *chunk->shdr.sh_name.val = offset;
-        offset += strlen(chunk->name) + 1;
+        Chunk *chunk = ctx->chunks.data[i];
+        if (kind(chunk) != HEADER && strlen(chunk->name) != 0) {
+            *chunk->shdr.sh_name.val = offset;
+            offset += strlen(chunk->name) + 1;
+        }
     }
     *chunk->shdr.sh_size.val = offset;
 }
@@ -471,7 +478,7 @@ void symtab_update_shdr(Context *ctx,Chunk *chunk) {
     }
 
     // Linker-synthesized symbols
-    for(int i = 0;i < ctx->objs.size;i++) {
+    for(int i = 0;i < ctx->chunks.size;i++) {
         Chunk *chunk = ctx->chunks.data[i];
         chunk->local_symtab_idx = nsyms;
         nsyms += chunk->num_local_symtab;
@@ -491,9 +498,9 @@ void symtab_update_shdr(Context *ctx,Chunk *chunk) {
         nsyms += file->inputfile.num_global_symtab;
     }
 
-    *chunk->shdr.sh_info.val = ((ObjectFile *)ctx->objs.data[0])->inputfile.global_symtab_idx;
-    *chunk->shdr.sh_link.val = ctx->strtab->chunk->shndx;
-    *chunk->shdr.sh_size.val = (nsyms == 1) ? 0 : nsyms * sizeof(ElfSym);
+    *(u32 *)&(chunk->shdr.sh_info) = ((ObjectFile *)ctx->objs.data[0])->inputfile.global_symtab_idx;
+    *(u32 *)&(chunk->shdr.sh_link) = ctx->strtab->chunk->shndx;
+    *(u32 *)&(chunk->shdr.sh_size) = (nsyms == 1) ? 0 : nsyms * sizeof(ElfSym);
 }
 
 void gotplt_update_shdr(Context *ctx,Chunk *chunk) {
@@ -549,4 +556,65 @@ void gnu_version_update_shdr(Context *ctx,Chunk *chunk) {
 void gnu_version_r_update_shdr(Context *ctx,Chunk *chunk) {
     *chunk->shdr.sh_size.val = ctx->verneed->contents.size;
     *chunk->shdr.sh_link.val = ctx->dynstr->chunk->shndx;
+}
+
+u64 get_entry_addr(Context *ctx){
+    if (ctx->arg.relocatable)
+        return 0;
+    ELFSymbol *sym = ctx->arg.entry;
+    if (sym && sym->file && !sym->file->inputfile.is_dso) {
+        
+        // return get_addr(ctx);
+    }
+    OutputSection *osec = output_find_section_with_name(ctx, ".text");
+    if (osec) {
+        return *(u32 *)(&(osec->chunk->shdr.sh_addr));
+    }
+    return 0;
+};
+void ehdr_copy_buf(Context *ctx,Chunk *chunk) {
+    ElfEhdr *hdr = (ElfEhdr *)(ctx->buf + *chunk->shdr.sh_offset.val);
+    memset(hdr, 0, sizeof(ElfEhdr));
+    memcpy(hdr->e_ident, "\177ELF", 4);
+    hdr->e_ident[EI_CLASS] = ELFCLASS32;
+    hdr->e_ident[EI_DATA] = ELFDATA2LSB;
+    hdr->e_ident[EI_VERSION] = EV_CURRENT;
+    *hdr->e_machine.val = target.e_machine;
+    *hdr->e_version.val = EV_CURRENT;
+    *(u32 *)(&(hdr->e_entry)) = get_entry_addr(ctx);
+    *(u32 *)(&(hdr->e_flags)) = get_eflags(ctx);
+    *hdr->e_ehsize.val = sizeof(ElfEhdr);
+
+    if (ctx->shstrtab) {
+        if (ctx->shstrtab->chunk->shndx < SHN_LORESERVE) {
+            *(u16 *)(&(hdr->e_shstrndx)) = ctx->shstrtab->chunk->shndx;
+        } else {
+            hdr->e_shstrndx.val[0] = (SHN_XINDEX >> 8) & 0xFF;
+            hdr->e_shstrndx.val[1] = SHN_XINDEX & 0xFF;
+        }
+            
+    }
+
+     if (ctx->arg.relocatable)
+        *hdr->e_type.val = ET_REL;
+    else if (ctx->arg.pic)
+        *hdr->e_type.val = ET_DYN;
+    else
+        *hdr->e_type.val = ET_EXEC;
+
+    if (ctx->phdr) {
+        *hdr->e_phoff.val = *ctx->phdr->chunk->shdr.sh_offset.val;
+        *hdr->e_phentsize.val = sizeof(ElfPhdr);
+        *hdr->e_phnum.val = *((u32 *)&(ctx->phdr->chunk->shdr.sh_size)) / sizeof(ElfPhdr);
+    }
+    if (ctx->shdr) {
+        *hdr->e_shoff.val = *((u32 *)&(ctx->shdr->chunk->shdr.sh_offset));
+        *hdr->e_shentsize.val = sizeof(ElfShdr);
+
+        // Since e_shnum is a 16-bit integer field, we can't store a very
+        // large value there. If it is >65535, the real value is stored to
+        // the zero'th section's sh_size field.
+        i64 shnum = *ctx->shdr->chunk->shdr.sh_size.val / sizeof(ElfShdr);
+        *hdr->e_shnum.val = (shnum <= UINT16_MAX) ? shnum : 0;
+  }
 }

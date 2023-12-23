@@ -1,0 +1,1 @@
+# elf_syms[0]  --->  symbols[1]
