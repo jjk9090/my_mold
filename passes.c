@@ -1400,6 +1400,8 @@ void copy(Chunk *chunk,Context *ctx) {
     char *name = chunk->name == NULL ? "(header)" : chunk->name;
     if(!strcmp(chunk->name,"EHDR"))
         ehdr_copy_buf(ctx,chunk);
+    if(!strcmp(chunk->name,"SHDR"))
+        shdr_copy_buf(ctx,chunk);
 }
 void copy_chunks(Context *ctx) {
     for(int i = 0;i < ctx->chunks.size;i++) {

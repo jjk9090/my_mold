@@ -35,7 +35,7 @@
               "main.o"
             ],
             "stopAtEntry": false,
-            "cwd": "${workspaceFolder}/test_demo/tt3",
+            "cwd": "${workspaceFolder}/test_demo/demo",
             "environment": [],
             "externalConsole": false,
             "MIMode": "gdb",

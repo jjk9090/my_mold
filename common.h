@@ -39,4 +39,16 @@ static inline u64 align_down(u64 val, u64 align) {
     assert(has_single_bit(align));
     return val & ~(align - 1);
 }
+
+static inline i64 write_vector(void *buf, vector vec) {
+    // 256   8  32
+    i64 sz = vec.size * sizeof(sizeof(U32));
+    memcpy(buf, vec.data, sz);
+    return sz;
+}
+static inline i64 write_string(void *buf, char *str) {
+    memcpy(buf, str, strlen(str));
+    *((u8 *)buf + strlen(str)) = '\0';
+    return strlen(str) + 1;
+}
 #endif

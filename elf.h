@@ -415,3 +415,7 @@ typedef struct {
     U32 p_flags;
     U32 p_align;
 } ElfPhdr;
+
+// bool is_undef(ElfSym sym){ 
+//     return *(u16 *)&(sym.st_shndx) == SHN_UNDEF; 
+// }

@@ -6,6 +6,10 @@
 
 #IncludeRegexTransform: 
 
+/home/jjk/project/mold2/my_mold/arch-arm32.c
+mold.h
+/home/jjk/project/mold2/my_mold/mold.h
+
 /home/jjk/project/mold2/my_mold/bigvector.h
 stdlib.h
 -
@@ -36,15 +40,27 @@ mold.h
 mold.h
 /home/jjk/project/mold2/my_mold/mold.h
 
+/home/jjk/project/mold2/my_mold/input_file.c
+mold.h
+/home/jjk/project/mold2/my_mold/mold.h
+
 /home/jjk/project/mold2/my_mold/input_file.h
 stdbool.h
 -
 mold.h
 /home/jjk/project/mold2/my_mold/mold.h
 
+/home/jjk/project/mold2/my_mold/input_sections.c
+mold.h
+/home/jjk/project/mold2/my_mold/mold.h
+
 /home/jjk/project/mold2/my_mold/integers.h
 stdint.h
 -
+
+/home/jjk/project/mold2/my_mold/main.c
+mold.h
+/home/jjk/project/mold2/my_mold/mold.h
 
 /home/jjk/project/mold2/my_mold/mapped_file.h
 mold.h
@@ -124,6 +140,10 @@ string.h
 mold.h
 /home/jjk/project/mold2/my_mold/mold.h
 
+/home/jjk/project/mold2/my_mold/output_chunks.c
+mold.h
+/home/jjk/project/mold2/my_mold/mold.h
+
 /home/jjk/project/mold2/my_mold/output_file.h
 mold.h
 /home/jjk/project/mold2/my_mold/mold.h
@@ -141,6 +161,10 @@ string.h
 -
 stdio.h
 -
+mold.h
+/home/jjk/project/mold2/my_mold/mold.h
+
+/home/jjk/project/mold2/my_mold/thunks.c
 mold.h
 /home/jjk/project/mold2/my_mold/mold.h
 

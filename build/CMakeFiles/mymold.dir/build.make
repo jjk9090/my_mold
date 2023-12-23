@@ -57,22 +57,9 @@ include CMakeFiles/mymold.dir/progress.make
 # Include the compile flags for this target's objects.
 include CMakeFiles/mymold.dir/flags.make
 
-CMakeFiles/mymold.dir/arch-arm32.c.o: CMakeFiles/mymold.dir/flags.make
-CMakeFiles/mymold.dir/arch-arm32.c.o: ../arch-arm32.c
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/jjk/project/mold2/my_mold/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Building C object CMakeFiles/mymold.dir/arch-arm32.c.o"
-	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -o CMakeFiles/mymold.dir/arch-arm32.c.o   -c /home/jjk/project/mold2/my_mold/arch-arm32.c
-
-CMakeFiles/mymold.dir/arch-arm32.c.i: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing C source to CMakeFiles/mymold.dir/arch-arm32.c.i"
-	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -E /home/jjk/project/mold2/my_mold/arch-arm32.c > CMakeFiles/mymold.dir/arch-arm32.c.i
-
-CMakeFiles/mymold.dir/arch-arm32.c.s: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling C source to assembly CMakeFiles/mymold.dir/arch-arm32.c.s"
-	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -S /home/jjk/project/mold2/my_mold/arch-arm32.c -o CMakeFiles/mymold.dir/arch-arm32.c.s
-
 CMakeFiles/mymold.dir/thunks.c.o: CMakeFiles/mymold.dir/flags.make
 CMakeFiles/mymold.dir/thunks.c.o: ../thunks.c
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/jjk/project/mold2/my_mold/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_2) "Building C object CMakeFiles/mymold.dir/thunks.c.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/jjk/project/mold2/my_mold/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Building C object CMakeFiles/mymold.dir/thunks.c.o"
 	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -o CMakeFiles/mymold.dir/thunks.c.o   -c /home/jjk/project/mold2/my_mold/thunks.c
 
 CMakeFiles/mymold.dir/thunks.c.i: cmake_force
@@ -82,6 +69,19 @@ CMakeFiles/mymold.dir/thunks.c.i: cmake_force
 CMakeFiles/mymold.dir/thunks.c.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling C source to assembly CMakeFiles/mymold.dir/thunks.c.s"
 	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -S /home/jjk/project/mold2/my_mold/thunks.c -o CMakeFiles/mymold.dir/thunks.c.s
+
+CMakeFiles/mymold.dir/arch-arm32.c.o: CMakeFiles/mymold.dir/flags.make
+CMakeFiles/mymold.dir/arch-arm32.c.o: ../arch-arm32.c
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/jjk/project/mold2/my_mold/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_2) "Building C object CMakeFiles/mymold.dir/arch-arm32.c.o"
+	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -o CMakeFiles/mymold.dir/arch-arm32.c.o   -c /home/jjk/project/mold2/my_mold/arch-arm32.c
+
+CMakeFiles/mymold.dir/arch-arm32.c.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing C source to CMakeFiles/mymold.dir/arch-arm32.c.i"
+	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -E /home/jjk/project/mold2/my_mold/arch-arm32.c > CMakeFiles/mymold.dir/arch-arm32.c.i
+
+CMakeFiles/mymold.dir/arch-arm32.c.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling C source to assembly CMakeFiles/mymold.dir/arch-arm32.c.s"
+	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -S /home/jjk/project/mold2/my_mold/arch-arm32.c -o CMakeFiles/mymold.dir/arch-arm32.c.s
 
 CMakeFiles/mymold.dir/input_sections.c.o: CMakeFiles/mymold.dir/flags.make
 CMakeFiles/mymold.dir/input_sections.c.o: ../input_sections.c
@@ -163,8 +163,8 @@ CMakeFiles/mymold.dir/main.c.s: cmake_force
 
 # Object files for target mymold
 mymold_OBJECTS = \
-"CMakeFiles/mymold.dir/arch-arm32.c.o" \
 "CMakeFiles/mymold.dir/thunks.c.o" \
+"CMakeFiles/mymold.dir/arch-arm32.c.o" \
 "CMakeFiles/mymold.dir/input_sections.c.o" \
 "CMakeFiles/mymold.dir/input_file.c.o" \
 "CMakeFiles/mymold.dir/output_chunks.c.o" \
@@ -175,8 +175,8 @@ mymold_OBJECTS = \
 # External object files for target mymold
 mymold_EXTERNAL_OBJECTS =
 
-../mymold: CMakeFiles/mymold.dir/arch-arm32.c.o
 ../mymold: CMakeFiles/mymold.dir/thunks.c.o
+../mymold: CMakeFiles/mymold.dir/arch-arm32.c.o
 ../mymold: CMakeFiles/mymold.dir/input_sections.c.o
 ../mymold: CMakeFiles/mymold.dir/input_file.c.o
 ../mymold: CMakeFiles/mymold.dir/output_chunks.c.o

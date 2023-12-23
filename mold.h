@@ -39,6 +39,11 @@ typedef struct OutputSectionKey OutputSectionKey;
 // 定义上下文信息的结构体
 ARM32 target;
 
+enum {
+    NO_PLT = 1 << 0, // Request an address other than .plt
+    NO_OPD = 1 << 1, // Request an address other than .opd (PPC64V1 only)
+};
+
 typedef enum { HEADER, OUTPUT_SECTION, SYNTHETIC } ChunkKind;
 
 typedef struct {
@@ -172,6 +177,7 @@ struct Context {
 
     u8 *buf;
     OutputFile *output_file;
+    char *output_tmpfile;
     struct {
         /* data */
         ELFSymbol *entry;
@@ -199,6 +205,7 @@ struct Context {
         bool execute_only;
         bool nmagic;
         bool pic;
+        bool quick_exit;
         vector retain_symbols_file;
         vector section_order;
 
@@ -387,6 +394,7 @@ void fix_synthetic_symbols(Context *ctx);
 i64 set_osec_offsets(Context *ctx);
 void copy_chunks(Context *ctx);
 void ehdr_copy_buf(Context *ctx,Chunk *chunk);
+void shdr_copy_buf(Context *ctx,Chunk *chunk);
 u64 get_eflags(Context *ctx);
 // 获取输入input_section
 static inline ElfShdr *get_shdr(ObjectFile *file,int shndx) {
@@ -430,6 +438,12 @@ static inline void set_output_section(Chunk *osec,ELFSymbol *sym) {
     uintptr_t addr = (uintptr_t)osec;
     assert((addr & TAG_MASK) == 0);
     sym->origin = addr | TAG_OSEC;
+}
+
+static inline Chunk *get_output_section(ELFSymbol *sym){
+    if ((sym->origin & TAG_MASK) == TAG_OSEC)
+        return (Chunk *)(sym->origin & ~TAG_MASK);
+    return NULL;
 }
 
 static inline int is_alpha(char c) {
@@ -510,6 +524,26 @@ static inline ChunkKind kind(Chunk *chunk) {
     if (chunk->is_outsec)
         return OUTPUT_SECTION;
     return SYNTHETIC;
+}
+
+static inline u64 elfsym_get_addr(Context *ctx,i64 flags,ELFSymbol *sym) {
+    SectionFragment *frag = get_frag(sym);
+    if (sym) {
+        if (!frag->is_alive) {
+            return 0;
+        }
+
+        // return frag_get_addr(ctx) + sym->value;
+    }
+    InputSection *isec = elfsym_get_input_section(sym);
+    if(!isec)
+        return sym->value;
+
+    if(!isec->is_alive) {
+
+    }
+
+    // return input_sec_get_addr() + sym->value;
 }
 #endif  // 结束头文件保护
 

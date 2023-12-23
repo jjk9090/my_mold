@@ -191,6 +191,7 @@ int main(int argc, char **argv) {
     ctx.arg.nmagic = false;
     ctx.arg.filler = -1;
     ctx.arg.pic = false;
+    ctx.arg.quick_exit = true;
 
     init_context(&ctx);
     
@@ -272,5 +273,11 @@ int main(int argc, char **argv) {
 
     // Copy input sections to the output file and apply relocations.
     copy_chunks(&ctx);
+
+    out_file_close(&ctx,(&ctx)->output_file);
+
+    // if (ctx.arg.quick_exit)
+    //     _exit(0);
+
     return 0;
 }

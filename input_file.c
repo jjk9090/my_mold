@@ -702,3 +702,26 @@ void obj_compute_symtab_size(Context *ctx,ObjectFile *file) {
         }
     }
 }
+
+void write_sym(ELFSymbol *sym, i64 idx,Context *ctx,ElfSym *symtab_base,u8 *strtab_base,i64 strtab_off) {
+    U32 *xindex = NULL;
+    // symtab_base[idx] = to_output_esym(ctx, sym, strtab_off, xindex);
+    strtab_off += write_string(strtab_base + strtab_off, sym->nameptr);
+};
+
+void obj_populate_symtab(Context *ctx,ObjectFile *file) {
+    ElfSym *symtab_base = (ElfSym *)(ctx->buf + *(u32 *)&(ctx->symtab->chunk->shdr.sh_offset));
+
+    u8 *strtab_base = ctx->buf + *(u32 *)&(ctx->strtab->chunk->shdr.sh_offset);
+    i64 strtab_off = file->inputfile.strtab_offset;
+
+    i64 local_symtab_idx = file->inputfile.local_symtab_idx;
+    i64 global_symtab_idx = file->inputfile.global_symtab_idx;
+
+    for (i64 i = 1; i < file->inputfile.first_global; i++) {
+        ELFSymbol *sym = file->symbols.data[i];
+        if (sym->write_to_symtab)
+            write_sym(sym, local_symtab_idx++,ctx,symtab_base,strtab_base,strtab_off);
+    }
+        
+}

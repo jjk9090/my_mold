@@ -32,6 +32,7 @@ typedef struct {
     i32 aux_idx;
 
     u16 ver_idx;
+    u8 visibility;
     bool is_weak : 1;
     bool write_to_symtab : 1;
     bool is_traced : 1;

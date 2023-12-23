@@ -572,6 +572,7 @@ u64 get_entry_addr(Context *ctx){
     }
     return 0;
 };
+
 void ehdr_copy_buf(Context *ctx,Chunk *chunk) {
     ElfEhdr *hdr = (ElfEhdr *)(ctx->buf + *chunk->shdr.sh_offset.val);
     memset(hdr, 0, sizeof(ElfEhdr));
@@ -616,5 +617,155 @@ void ehdr_copy_buf(Context *ctx,Chunk *chunk) {
         // the zero'th section's sh_size field.
         i64 shnum = *ctx->shdr->chunk->shdr.sh_size.val / sizeof(ElfShdr);
         *hdr->e_shnum.val = (shnum <= UINT16_MAX) ? shnum : 0;
-  }
+    }
+}
+
+void shdr_copy_buf(Context *ctx,Chunk *chunk) {
+    ElfShdr *hdr = (ElfShdr *)(ctx->buf + *(u32 *)&(chunk->shdr.sh_offset));
+    memset(hdr, 0, *(u32 *)&(chunk->shdr.sh_size));
+
+    i64 shnum = *(u32 *)&(ctx->shdr->chunk->shdr.sh_size) / sizeof(ElfShdr);
+    if (UINT16_MAX < shnum)
+        *(u32 *)&(hdr->sh_size) = shnum;
+
+    if (ctx->shstrtab && SHN_LORESERVE <= ctx->shstrtab->chunk->shndx)
+        *(u32 *)&(hdr->sh_link) = ctx->shstrtab->chunk->shndx;
+
+    for(int i = 0;i < ctx->chunks.size;i++) {
+        Chunk *chunk = ctx->chunks.data[i];
+        if(chunk->shndx)
+            hdr[chunk->shndx] = chunk->shdr;
+    }
+}
+
+void phdr_copy_buf(Context *ctx,Chunk *chunk) {
+  write_vector(ctx->buf + *(u32 *)&(chunk->shdr.sh_offset), ctx->phdr->phdrs);
+}
+
+void strtab_copy_buf(Context *ctx,Chunk *chunk) {
+    u8 *buf = ctx->buf + *(u32 *)&(chunk->shdr.sh_offset);
+    buf[0] = '\0';
+
+    if (!ctx->arg.strip_all && !ctx->arg.retain_symbols_file.size)
+        memcpy(buf + 1, "$a\0$t\0$d", 9);
+}
+
+void shstrtab_copy_buf(Context *ctx,Chunk *chunk) {
+    u8 *base = ctx->buf + *(u32 *)&(chunk->shdr.sh_offset);
+    base[0] = '\0';
+
+    for (int i = 0;i < ctx->chunks.size;i++) {
+        Chunk *chunk = ctx->chunks.data[i];
+        if (kind(chunk) != HEADER && !chunk->name)
+            write_string(base + *(u32 *)&(chunk->shdr.sh_name), chunk->name);
+    }       
+}
+
+// If we create range extension thunks, we also synthesize symbols to mark
+// the locations of thunks. Creating such symbols is optional, but it helps
+// disassembling and/or debugging our output.
+void output_sec_populate_symtab(Context *ctx,Chunk *chunk) {
+    if (chunk->num_local_symtab == 0)
+        return;
+}
+
+void symtab_copy_buf(Context *ctx,Chunk *chunk) {
+    ElfSym *buf = (ElfSym *)(ctx->buf + *(u32 *)&(chunk->shdr.sh_offset));
+    memset(buf, 0, sizeof(ElfSym));
+    
+    // Create section symbols
+    for(int i = 0;i < ctx->chunks.size;i++) {
+        Chunk *chunk = ctx->chunks.data[i];
+        if(chunk->shndx) {
+            ElfSym sym = buf[chunk->shndx];
+            memset(&sym, 0, sizeof(sym));
+
+            sym.st_type = STT_SECTION;
+            *(u32 *)&(sym.st_value) = *(u32 *)&(chunk->shdr.sh_addr);
+            *(u16 *)&(sym.st_shndx) = chunk->shndx;
+        }
+    }
+
+    // Populate linker-synthesized symbols
+
+    // Copy symbols from input files
+}
+
+i64 get_st_shndx(ELFSymbol *sym){
+    SectionFragment *frag = get_frag(sym);
+    if (frag)
+        if (frag->is_alive)
+        return frag->output_section->chunk->shndx;
+
+    InputSection *isec = elfsym_get_input_section(sym);
+    if (sym) {
+        if (isec->is_alive)
+            return isec->output_section->chunk->shndx;
+        // else if (is_killed_by_icf())
+        //     return isec->leader->output_section->shndx;
+    }
+
+    return SHN_UNDEF;
+};
+
+ElfSym to_output_esym(Context *ctx,ELFSymbol *sym, u32 st_name,
+                         U32 *shn_xindex,ObjectFile *file,int i) {
+    ElfSym esym1;
+    memset(&esym1, 0, sizeof(esym1));
+
+    *(u32 *)&(esym1.st_name) = st_name;
+    esym1.st_type = elfsym_get_type(file,i);
+    esym1.st_size = esym(&(file->inputfile),i)->st_size;
+
+    if (is_local(ctx,sym,file,i))
+        esym1.st_bind = STB_LOCAL;
+    else if (sym->is_weak)
+        esym1.st_bind = STB_WEAK;
+    else if (sym->file->inputfile.is_dso)
+        esym1.st_bind = STB_GLOBAL;
+    else
+        esym1.st_bind = esym(&(file->inputfile),i)->st_bind;
+
+    i64 shndx = -1;
+    Chunk *osec = get_output_section(sym);
+    SectionFragment *frag = get_frag(sym);
+    // if (sym->file->inputfile.is_dso || is_undef(esym1)) {
+    //     *(u16 *)&(esym1.st_shndx) = SHN_UNDEF;
+    //     if (sym->is_canonical)
+    //     *(u32 *)&(esym1.st_value) = get_plt_addr(ctx);
+    // } else 
+    if (osec) {
+        // Linker-synthesized symbols
+        shndx = osec->shndx;
+        // *(u32 *)&(esym1.st_value) = elfsym_get_addr(ctx);
+    } else if (frag) {
+        // Section fragment 
+        shndx = frag->output_section->chunk->shndx;
+        // *(u32 *)&(esym1.st_value) = elfsym_get_addr(ctx);
+    } 
+    // else if (!get_input_section()) {
+    //     // Absolute symbol
+    //     *(u16 *)&(esym1.st_shndx) = SHN_ABS;
+    //     *(u32 *)&(esym1.st_value) = get_addr(ctx);
+    // } 
+    else {
+        shndx = get_st_shndx(sym);
+        esym1.st_visibility = sym->visibility;
+        *(u32 *)&(esym1.st_value) = elfsym_get_addr(ctx, NO_PLT,sym);
+    }
+
+    // Symbol's st_shndx is only 16 bits wide, so we can't store a large
+    // section index there. If the total number of sections is equal to
+    // or greater than SHN_LORESERVE (= 65280), the real index is stored
+    // to a SHT_SYMTAB_SHNDX section which contains a parallel array of
+    // the symbol table.
+    if (0 <= shndx && shndx < SHN_LORESERVE) {
+        *(u16 *)&(esym1.st_shndx) = shndx;
+    } else if (SHN_LORESERVE <= shndx) {
+        assert(shn_xindex);
+        *(u16 *)&(esym1.st_shndx) = SHN_XINDEX;
+        *(u32 *)&(shn_xindex) = shndx;
+    }
+
+    return esym1;
 }
