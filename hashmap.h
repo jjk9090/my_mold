@@ -47,10 +47,10 @@ static inline void out_sec_insert_element(OutputSection_element *map,OutputSecti
     HASH_ADD(out, map, key, sizeof(OutputSectionKey *), element); // 添加元素
 }
 
-static inline my_hash_element *merger_sec_find_element(my_hash_element *map,char *key) {
+static inline SectionFragment *merger_sec_find_element(my_hash_element *map,char *key) {
     my_hash_element *element;
     HASH_FIND(hh,map, &key,sizeof(char *), element); // 使用 HASH_FIND_INT64 宏查找元素
-    return element;
+    return element->value;
 }
 
 static inline OutputSection_element *out_sec_find_element(OutputSection_element *map,OutputSectionKey *key) {

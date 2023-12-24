@@ -26,6 +26,9 @@ typedef struct Chunk {
     bool is_plt;
     DynsymSection *dynsym_sec;
     bool is_dynsym;
+
+    MergedSection *merge_sec;
+    bool is_merge_sec;
 } Chunk;
 
 typedef struct {

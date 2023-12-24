@@ -38,7 +38,7 @@ typedef struct OutputSectionKey OutputSectionKey;
 #include "mapped_file.h"
 // 定义上下文信息的结构体
 ARM32 target;
-
+vector merge_string;
 enum {
     NO_PLT = 1 << 0, // Request an address other than .plt
     NO_OPD = 1 << 1, // Request an address other than .opd (PPC64V1 only)
@@ -53,6 +53,7 @@ typedef struct {
 
 typedef struct ObjectFile ObjectFile;
 typedef struct OutputS OutputSection;
+typedef struct MergedSection MergedSection;
 // 输出段的结构体
 typedef struct 
 { 
@@ -395,7 +396,21 @@ i64 set_osec_offsets(Context *ctx);
 void copy_chunks(Context *ctx);
 void ehdr_copy_buf(Context *ctx,Chunk *chunk);
 void shdr_copy_buf(Context *ctx,Chunk *chunk);
+void phdr_copy_buf(Context *ctx,Chunk *chunk);
+void strtab_copy_buf(Context *ctx,Chunk *chunk);
+void shstrtab_copy_buf(Context *ctx,Chunk *chunk);
+void symtab_copy_buf(Context *ctx,Chunk *chunk);
+void ehframe_hdr_copy_buf(Context *ctx,Chunk *chunk);
+void merged_sec_copy_buf(Context *ctx,Chunk *chunk);
+void gotplt_copy_buf(Context *ctx,Chunk *chunk);
+void got_copy_buf(Context *ctx,Chunk *chunk);
+void out_sec_copy_buf(Context *ctx,Chunk *chunk);
+
+void thunk_copy_buf(Context *ctx,Thunk *thunk);
+void write_to(Context *ctx,u8 *buf,OutputSection *osec);
+void isec_write_to(Context *ctx,u8 *buf,InputSection *isec,int i);
 u64 get_eflags(Context *ctx);
+
 // 获取输入input_section
 static inline ElfShdr *get_shdr(ObjectFile *file,int shndx) {
   if (shndx < file->inputfile.elf_sections_num)

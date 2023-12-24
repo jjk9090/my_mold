@@ -68,6 +68,7 @@ SectionFragment *merge_sec_insert(Context *ctx, StringView *data, u64 hash,
     frag->p2align = 0;
     frag->offset = -1;
     bool inserted;
+    VectorAdd(&merge_string,(char *)data->data,sizeof(char *));
     merger_sec_insert_element(sec,(char *)data->data,frag/*,hash*/);
     //   update_maximum(frag->p2align, p2align);
     return frag;
@@ -420,6 +421,7 @@ i64 get_reldyn_size(Context *ctx,Chunk *chunk) {
     // 暂时没有
     return n;
 }
+
 void reldyn_update_shdr(Context *ctx,Chunk *chunk) {
     i64 offset = 0;
 
@@ -768,4 +770,90 @@ ElfSym to_output_esym(Context *ctx,ELFSymbol *sym, u32 st_name,
     }
 
     return esym1;
+}
+
+void write_to(Context *ctx,u8 *buf,OutputSection *osec) {
+    for(int i = 0;i < osec->member.size;i++) {
+        // Copy section contents to an output file.
+        InputSection *isec = osec->member.data[i];
+        isec_write_to(ctx,buf + isec->offset,isec,i);
+
+        u64 this_end = isec->offset + isec->sh_size;
+        u64 next_start;
+        if (i + 1 < osec->member.size)
+            next_start = ((InputSection *)(osec->member.data[i + 1]))->offset;
+        else
+            next_start = *(u32 *)&(osec->chunk->shdr.sh_size);
+
+        u8 *loc = buf + this_end;
+        i64 size = next_start - this_end;
+
+        if (*(u32 *)&(osec->chunk->shdr.sh_flags) & SHF_EXECINSTR) {
+        for (i64 i = 0; i + sizeof(target.filler) <= size; i += sizeof(target.filler))
+            memcpy(loc + i, target.filler, sizeof(target.filler));
+        } else {
+            memset(loc, 0, size);
+        }
+    }
+
+    for(int i = 0;i < osec->thunks.size;i++) {
+        Thunk *thunk = osec->thunks.data[i];
+        thunk_copy_buf(ctx,thunk);
+    }
+}
+
+void out_sec_copy_buf(Context *ctx,Chunk *chunk) {
+    if (*(u32 *)&(chunk->shdr.sh_type) != SHT_NOBITS)
+        write_to(ctx, ctx->buf + *(u32 *)&(chunk->shdr.sh_offset),chunk->outsec);
+}
+
+void got_copy_buf(Context *ctx,Chunk *chunk) {
+    Word *buf = (Word *)(ctx->buf + *(u32 *)&(chunk->shdr.sh_offset));
+    memset(buf,0,*(u32 *)&(chunk->shdr.sh_size));
+
+    ElfRel *rel = (ElfRel *)(ctx->buf + *(u32 *)&(ctx->reldyn->chunk->shdr.sh_offset) + chunk->reldyn_offset);
+
+    // 目前没有got_entry
+}
+
+void gotplt_copy_buf(Context *ctx,Chunk *chunk) {
+    Word *buf = (Word *)(ctx->buf + *(u32 *)&(chunk->shdr.sh_offset));
+    buf->val[0] = ctx->dynamic ? (u64)*(u32 *)&(ctx->dynamic->chunk->shdr.sh_addr) : 0;
+    buf->val[1] = 0;
+    buf->val[2] = 0;
+
+    for (i64 i = 0; i < ctx->plt->symbols.size; i++)
+        buf->val[i + 3] = *(u32 *)&(ctx->plt->chunk->shdr.sh_addr);
+}
+void merge_write_to(Context *ctx, u8 *buf,MergedSection *osec) {
+    i64 shard_size = 256;
+
+    // memset(buf + *(u32 *)&(osec->shard_offsets.data),0,*(u32 *)&(osec->shard_offsets.data));
+    // for (i64 j = shard_size * i; j < shard_size * (i + 1); j++)
+    // if (const char *key = map.entries[j].key) {
+    //     SectionFragment *frag = osec->map map.entries[j].value;
+    //     if (frag.is_alive)
+    //     memcpy(buf + frag.offset, key, map.entries[j].keylen);
+    // }
+    // for(int j = 9;j < merge_string.size;j++) {
+    //     SectionFragment *frag = merger_sec_find_element(osec->map,(char *)merge_string.data[j]);
+    //     if (frag->is_alive)
+    //         memcpy(buf + frag->offset, (char *)merge_string.data[j], sizeof(merge_string.data[j]));
+    // }
+}
+
+void merged_sec_copy_buf(Context *ctx,Chunk *chunk) {
+    merge_write_to(ctx, ctx->buf + *(u32 *)&(chunk->shdr.sh_offset),chunk->merge_sec);
+}
+
+void ehframe_hdr_copy_buf(Context *ctx,Chunk *chunk) {
+    u8 *base = ctx->buf + *(u32 *)&(chunk->shdr.sh_offset);
+
+    base[0] = 1;
+    base[1] = DW_EH_PE_pcrel | DW_EH_PE_sdata4;
+    base[2] = DW_EH_PE_udata4;
+    base[3] = DW_EH_PE_datarel | DW_EH_PE_sdata4;
+
+    *(u32 *)(base + 4) = *(u32 *)&(ctx->eh_frame->chunk->shdr.sh_addr) - *(u32 *)&(chunk->shdr.sh_addr) - 4;
+    *(u32 *)(base + 8) = ctx->eh_frame_hdr->num_fdes;
 }

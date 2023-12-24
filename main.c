@@ -192,7 +192,9 @@ int main(int argc, char **argv) {
     ctx.arg.filler = -1;
     ctx.arg.pic = false;
     ctx.arg.quick_exit = true;
+    VectorNew(&((&ctx)->arg.retain_symbols_file),1);
 
+    VectorNew(&merge_string,1);
     init_context(&ctx);
     
     // VectorNew(&(&ctx)->string_pool,1);
@@ -270,6 +272,10 @@ int main(int argc, char **argv) {
     // Create an output file
     (&ctx)->output_file = output_open(&ctx, ctx.arg.output, filesize, 0777);
     ctx.buf = ctx.output_file->buf;
+    
+    for(int i = 0;i < merge_string.size;i++) {
+        printf("%s\n",(char *)merge_string.data[i]);
+    }
     // Copy input sections to the output file and apply relocations.
     copy_chunks(&ctx);
 

@@ -46,3 +46,34 @@ void define_input_section(ObjectFile *file,Context *ctx,int i) {
     }
     
 }
+
+void uncompress_to(Context *ctx,u8 *buf,ElfShdr *shdr,InputSection *isec) {
+    if(!(*(u32 *)&(shdr->sh_flags) & SHF_COMPRESSED) || isec->uncompressed) {
+        memcpy(buf, isec->contents->data, isec->contents->size);
+        return;
+    }
+}
+
+void apply_reloc_alloc(Context *ctx,u8 *base,InputSection *isec) {
+    StringView view = get_rels(ctx,isec->file,isec);
+    ElfRel *dynrel = NULL;
+
+    if (ctx->reldyn)
+        dynrel = (ElfRel *)(ctx->buf + *(u32 *)&(ctx->reldyn->chunk->shdr.sh_offset) +
+                            isec->file->reldyn_offset + isec->reldyn_offset);
+
+    // rels 目前没有值
+}
+
+void isec_write_to(Context *ctx,u8 *buf,InputSection *isec,int i) {
+    ElfShdr *shdr  = get_shdr(isec->file,i);
+    if(*(u32 *)&(shdr->sh_type) == SHT_NOBITS || isec->sh_size == 0)
+        return;
+
+    uncompress_to(ctx, buf,shdr,isec);
+
+    if (!ctx->arg.relocatable) {
+        if (*(u32 *)&(shdr->sh_flags) & SHF_ALLOC)
+            apply_reloc_alloc(ctx, buf,isec);
+    }
+}

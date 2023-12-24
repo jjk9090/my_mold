@@ -11,14 +11,13 @@ typedef struct SmartPointer {
 
 
 
-typedef struct  
-{
+struct MergedSection{
     /* data */
     Chunk *chunk;
     vector shard_offsets;
 
     my_hash_element *map;
-} MergedSection;
+};
 
 typedef struct SectionFragment {
     MergedSection *output_section;

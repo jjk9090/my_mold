@@ -175,6 +175,7 @@ SectionFragment *SectionFragment_create(MergedSection *sec,bool is_alive) {
 void insert(MergedSection *sec,Context *ctx,char *data,u64 hash,i64 p2align) {
     bool is_alive = !ctx->arg.gc_sections || !(*sec->chunk->shdr.sh_flags.val & SHF_ALLOC);
     SectionFragment *frag = SectionFragment_create(sec,is_alive);
+    VectorAdd(&merge_string,(char *)data,sizeof(char *));
     merger_sec_insert_element(sec,data,frag/*,hash*/);
 }
 
@@ -655,6 +656,8 @@ void create_output_sections(Context *ctx) {
     for (int i = 0;i < ctx->merged_sections_count;i++) {
         MergedSection *osec = ctx->merged_sections.data[i];
         if (*osec->chunk->shdr.sh_size.val) {
+            osec->chunk->merge_sec = osec;
+            osec->chunk->is_merge_sec = true;
             VectorAdd(&chunks,osec->chunk,sizeof(Chunk *));
             // VectorAdd(&(ctx->chunks),osec->chunk,sizeof(Chunk *));
         }
@@ -675,11 +678,6 @@ void create_output_sections(Context *ctx) {
         VectorAdd(&(ctx->chunks),temp2[i],(sizeof(Chunk *)));
     } 
     
-    for (int i = 0; i < ctx->chunks.size; i++) {
-        // 获取当前元素
-        Chunk* currentElement = ctx->chunks.data[i];
-        // printf("name: %s\n", currentElement->name);
-    } 
 }
 
 void resolve_section_pieces(Context *ctx) {
@@ -1108,7 +1106,11 @@ void compute_section_headers(Context *ctx) {
     int p = 0;
     // 所有输出段更新shdr
     update_shdr(ctx);
-
+    for (int i = 0; i < ctx->chunks.size; i++) {
+        // 获取当前元素
+        Chunk* currentElement = ctx->chunks.data[i];
+        printf("pre-name: %s\n", currentElement->name);
+    } 
     // Remove empty chunks.
     for (int i = 0; i < ctx->chunks.size; ) {
         Chunk *chunk = ctx->chunks.data[i];
@@ -1138,6 +1140,12 @@ void compute_section_headers(Context *ctx) {
         *(u32 *)&(ctx->shdr->chunk->shdr.sh_size) = shndx * sizeof(ElfShdr);
 
     update_shdr(ctx);  
+
+    for (int i = 0; i < ctx->chunks.size; i++) {
+        // 获取当前元素
+        Chunk* currentElement = ctx->chunks.data[i];
+        printf("name: %s\n", currentElement->name);
+    } 
 }
 
 i64 get_flags(Context *ctx,Chunk *chunk) {
@@ -1397,15 +1405,49 @@ void fix_synthetic_symbols(Context *ctx) {
 
 void copy(Chunk *chunk,Context *ctx) {
     char *name = chunk->name == NULL ? "(header)" : chunk->name;
-    if(!strcmp(chunk->name,"EHDR"))
+    if (!strcmp(chunk->name,"EHDR"))
         ehdr_copy_buf(ctx,chunk);
-    if(!strcmp(chunk->name,"SHDR"))
+
+    if (!strcmp(chunk->name,"SHDR"))
         shdr_copy_buf(ctx,chunk);
+      
+    if (!strcmp(chunk->name,"PHDR"))
+        phdr_copy_buf(ctx,chunk);
+
+    if (!strcmp(chunk->name,".strtab"))
+        strtab_copy_buf(ctx,chunk);
+
+    if (!strcmp(chunk->name,".shstrtab"))
+        shstrtab_copy_buf(ctx,chunk);
+
+    if (!strcmp(chunk->name,".symtab"))
+        symtab_copy_buf(ctx,chunk);
+    
+    if (!strcmp(chunk->name,".got"))
+        got_copy_buf(ctx,chunk);
+
+    if (!strcmp(chunk->name,".got.plt"))
+        gotplt_copy_buf(ctx,chunk);
+
+    if (!strcmp(chunk->name,".comment"))
+        merged_sec_copy_buf(ctx,chunk);
+
+    if (!strcmp(chunk->name,".eh_frame_hdr"))
+        ehframe_hdr_copy_buf(ctx,chunk);
+
+    if (chunk->is_outsec)
+        out_sec_copy_buf(ctx,chunk);
 }
+
 void copy_chunks(Context *ctx) {
     for(int i = 0;i < ctx->chunks.size;i++) {
         Chunk *chunk = ctx->chunks.data[i];
         if(*chunk->shdr.sh_type.val != SHT_REL)
+            copy(chunk,ctx);
+    }
+    for(int i = 0;i < ctx->chunks.size;i++) {
+        Chunk *chunk = ctx->chunks.data[i];
+        if(*chunk->shdr.sh_type.val == SHT_REL)
             copy(chunk,ctx);
     }
 }

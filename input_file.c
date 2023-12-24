@@ -531,8 +531,6 @@ void file_resolve_section_pieces(Context *ctx,ObjectFile *file) {
             break;
         if (m) {
             VectorNew(&(m->fragments),m->strings.size);
-            printf("%s\n",((StringView *)(m->strings.data[0]))->data);
-            printf("%s\n",((StringView *)(m->strings.data[1]))->data);
             for(i64 i = 0;i < m->strings.size;i++) {
                 StringView *temp = (StringView *)m->strings.data;
                 VectorAdd(&(m->fragments),merge_sec_insert(ctx,(StringView *)m->strings.data[i],(u64)m->hashes.data[i],
