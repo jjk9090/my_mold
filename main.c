@@ -208,19 +208,10 @@ int main(int argc, char **argv) {
     init_ctx(&ctx);
     
     init_context(&ctx);
-    
-    // VectorNew(&(&ctx)->string_pool,1);
-    // 使用展开后的参数列表
-    // printf("Expanded arguments:\n");
-    // for (int i = 0; ctx.cmdline_args[i] != NULL; i++) {
-    //     printf("%s\n", ctx.cmdline_args[i]);
-    // }
-    // 
+     
     char **file_args = parse_nonpositional_args(&ctx);
         ctx.arg.emulation = strdup(deduce_machine_type(&ctx, file_args));
     
-    // if (!strcmp(ctx.arg.emulation,"x86_64"))
-    //     return redo_main(ctx, argc, argv);
     // 读取输入文件
     read_input_files(&ctx, file_args);
 
@@ -274,21 +265,13 @@ int main(int argc, char **argv) {
 
     // 构造output .eh_frame
     eh_frame_construct(&ctx);
-    for(int i = 0;i < (&ctx)->chunks.size;i++) {
-        Chunk *chunk = (Chunk *)((&ctx)->chunks.data[i]);
-        if(!strcmp(chunk->name,".text"))
-            printf("%s\n",chunk->name);
-    }
+
     // Compute the section header values for all sections.
     compute_section_headers(&ctx);
 
     // Assign offsets to output sections
     i64 filesize = set_osec_offsets(&ctx);
-    for(int i = 0;i < (&ctx)->chunks.size;i++) {
-        Chunk *chunk = (Chunk *)((&ctx)->chunks.data[i]);
-        if(!strcmp(chunk->name,".text"))
-            printf("%s\n",chunk->name);
-    }
+
     // Set actual addresses to linker-synthesized symbols.
     fix_synthetic_symbols(&ctx);
 
@@ -296,9 +279,6 @@ int main(int argc, char **argv) {
     (&ctx)->output_file = output_open(&ctx, ctx.arg.output, filesize, 0777);
     ctx.buf = ctx.output_file->buf;
     
-    for(int i = 0;i < merge_string.size;i++) {
-        printf("%s\n",(char *)merge_string.data[i]);
-    }
     // Copy input sections to the output file and apply relocations.
     copy_chunks(&ctx);
 

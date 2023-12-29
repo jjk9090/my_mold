@@ -585,8 +585,6 @@ static inline void error(Context *ctx) {
     unsigned char *ptr = (unsigned char *)hdr1;
     int size = sizeof(ElfEhdr);
     unsigned short lastTwoBytes = *(unsigned short *)(ptr + size - 2);
-
-    printf("%hu\n", lastTwoBytes);
 }
 #endif  // 结束头文件保护
 

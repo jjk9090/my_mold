@@ -6,5 +6,5 @@ C_FLAGS = -g   -D__NO_INLINE__ -std=c99 -std=gnu99
 
 C_DEFINES = -D__OPTIMIZE__
 
-C_INCLUDES = -I/home/jjk/project/mold2/my_mold 
+C_INCLUDES = -I/home/jjk/project/mold2/my_mold/include 
 

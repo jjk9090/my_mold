@@ -4,14 +4,14 @@ set(CMAKE_DEPENDS_LANGUAGES
   )
 # The set of files for implicit dependencies of each language:
 set(CMAKE_DEPENDS_CHECK_C
-  "/home/jjk/project/mold2/my_mold/arch_arm32.c" "/home/jjk/project/mold2/my_mold/build/CMakeFiles/mymold.dir/arch_arm32.c.o"
-  "/home/jjk/project/mold2/my_mold/input_file.c" "/home/jjk/project/mold2/my_mold/build/CMakeFiles/mymold.dir/input_file.c.o"
-  "/home/jjk/project/mold2/my_mold/input_sections.c" "/home/jjk/project/mold2/my_mold/build/CMakeFiles/mymold.dir/input_sections.c.o"
   "/home/jjk/project/mold2/my_mold/main.c" "/home/jjk/project/mold2/my_mold/build/CMakeFiles/mymold.dir/main.c.o"
-  "/home/jjk/project/mold2/my_mold/output_chunks.c" "/home/jjk/project/mold2/my_mold/build/CMakeFiles/mymold.dir/output_chunks.c.o"
-  "/home/jjk/project/mold2/my_mold/passes.c" "/home/jjk/project/mold2/my_mold/build/CMakeFiles/mymold.dir/passes.c.o"
-  "/home/jjk/project/mold2/my_mold/thunks.c" "/home/jjk/project/mold2/my_mold/build/CMakeFiles/mymold.dir/thunks.c.o"
-  "/home/jjk/project/mold2/my_mold/xxhash.c" "/home/jjk/project/mold2/my_mold/build/CMakeFiles/mymold.dir/xxhash.c.o"
+  "/home/jjk/project/mold2/my_mold/src/arch_arm32.c" "/home/jjk/project/mold2/my_mold/build/CMakeFiles/mymold.dir/src/arch_arm32.c.o"
+  "/home/jjk/project/mold2/my_mold/src/input_file.c" "/home/jjk/project/mold2/my_mold/build/CMakeFiles/mymold.dir/src/input_file.c.o"
+  "/home/jjk/project/mold2/my_mold/src/input_sections.c" "/home/jjk/project/mold2/my_mold/build/CMakeFiles/mymold.dir/src/input_sections.c.o"
+  "/home/jjk/project/mold2/my_mold/src/output_chunks.c" "/home/jjk/project/mold2/my_mold/build/CMakeFiles/mymold.dir/src/output_chunks.c.o"
+  "/home/jjk/project/mold2/my_mold/src/passes.c" "/home/jjk/project/mold2/my_mold/build/CMakeFiles/mymold.dir/src/passes.c.o"
+  "/home/jjk/project/mold2/my_mold/src/thunks.c" "/home/jjk/project/mold2/my_mold/build/CMakeFiles/mymold.dir/src/thunks.c.o"
+  "/home/jjk/project/mold2/my_mold/src/xxhash.c" "/home/jjk/project/mold2/my_mold/build/CMakeFiles/mymold.dir/src/xxhash.c.o"
   )
 set(CMAKE_C_COMPILER_ID "GNU")
 
@@ -22,7 +22,7 @@ set(CMAKE_TARGET_DEFINITIONS_C
 
 # The include file search paths:
 set(CMAKE_C_TARGET_INCLUDE_PATH
-  "../"
+  "../include"
   )
 
 # Targets to which this target links.

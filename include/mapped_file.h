@@ -153,8 +153,6 @@ static inline MappedFile *MappedFile_open(Context *ctx,char *path) {
         }
 #endif
     }
-
-
     close(fd);
     return mf;
 }

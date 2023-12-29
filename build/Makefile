@@ -123,87 +123,6 @@ mymold/fast:
 	$(MAKE) -f CMakeFiles/mymold.dir/build.make CMakeFiles/mymold.dir/build
 .PHONY : mymold/fast
 
-arch_arm32.o: arch_arm32.c.o
-
-.PHONY : arch_arm32.o
-
-# target to build an object file
-arch_arm32.c.o:
-	$(MAKE) -f CMakeFiles/mymold.dir/build.make CMakeFiles/mymold.dir/arch_arm32.c.o
-.PHONY : arch_arm32.c.o
-
-arch_arm32.i: arch_arm32.c.i
-
-.PHONY : arch_arm32.i
-
-# target to preprocess a source file
-arch_arm32.c.i:
-	$(MAKE) -f CMakeFiles/mymold.dir/build.make CMakeFiles/mymold.dir/arch_arm32.c.i
-.PHONY : arch_arm32.c.i
-
-arch_arm32.s: arch_arm32.c.s
-
-.PHONY : arch_arm32.s
-
-# target to generate assembly for a file
-arch_arm32.c.s:
-	$(MAKE) -f CMakeFiles/mymold.dir/build.make CMakeFiles/mymold.dir/arch_arm32.c.s
-.PHONY : arch_arm32.c.s
-
-input_file.o: input_file.c.o
-
-.PHONY : input_file.o
-
-# target to build an object file
-input_file.c.o:
-	$(MAKE) -f CMakeFiles/mymold.dir/build.make CMakeFiles/mymold.dir/input_file.c.o
-.PHONY : input_file.c.o
-
-input_file.i: input_file.c.i
-
-.PHONY : input_file.i
-
-# target to preprocess a source file
-input_file.c.i:
-	$(MAKE) -f CMakeFiles/mymold.dir/build.make CMakeFiles/mymold.dir/input_file.c.i
-.PHONY : input_file.c.i
-
-input_file.s: input_file.c.s
-
-.PHONY : input_file.s
-
-# target to generate assembly for a file
-input_file.c.s:
-	$(MAKE) -f CMakeFiles/mymold.dir/build.make CMakeFiles/mymold.dir/input_file.c.s
-.PHONY : input_file.c.s
-
-input_sections.o: input_sections.c.o
-
-.PHONY : input_sections.o
-
-# target to build an object file
-input_sections.c.o:
-	$(MAKE) -f CMakeFiles/mymold.dir/build.make CMakeFiles/mymold.dir/input_sections.c.o
-.PHONY : input_sections.c.o
-
-input_sections.i: input_sections.c.i
-
-.PHONY : input_sections.i
-
-# target to preprocess a source file
-input_sections.c.i:
-	$(MAKE) -f CMakeFiles/mymold.dir/build.make CMakeFiles/mymold.dir/input_sections.c.i
-.PHONY : input_sections.c.i
-
-input_sections.s: input_sections.c.s
-
-.PHONY : input_sections.s
-
-# target to generate assembly for a file
-input_sections.c.s:
-	$(MAKE) -f CMakeFiles/mymold.dir/build.make CMakeFiles/mymold.dir/input_sections.c.s
-.PHONY : input_sections.c.s
-
 main.o: main.c.o
 
 .PHONY : main.o
@@ -231,113 +150,194 @@ main.c.s:
 	$(MAKE) -f CMakeFiles/mymold.dir/build.make CMakeFiles/mymold.dir/main.c.s
 .PHONY : main.c.s
 
-output_chunks.o: output_chunks.c.o
+src/arch_arm32.o: src/arch_arm32.c.o
 
-.PHONY : output_chunks.o
-
-# target to build an object file
-output_chunks.c.o:
-	$(MAKE) -f CMakeFiles/mymold.dir/build.make CMakeFiles/mymold.dir/output_chunks.c.o
-.PHONY : output_chunks.c.o
-
-output_chunks.i: output_chunks.c.i
-
-.PHONY : output_chunks.i
-
-# target to preprocess a source file
-output_chunks.c.i:
-	$(MAKE) -f CMakeFiles/mymold.dir/build.make CMakeFiles/mymold.dir/output_chunks.c.i
-.PHONY : output_chunks.c.i
-
-output_chunks.s: output_chunks.c.s
-
-.PHONY : output_chunks.s
-
-# target to generate assembly for a file
-output_chunks.c.s:
-	$(MAKE) -f CMakeFiles/mymold.dir/build.make CMakeFiles/mymold.dir/output_chunks.c.s
-.PHONY : output_chunks.c.s
-
-passes.o: passes.c.o
-
-.PHONY : passes.o
+.PHONY : src/arch_arm32.o
 
 # target to build an object file
-passes.c.o:
-	$(MAKE) -f CMakeFiles/mymold.dir/build.make CMakeFiles/mymold.dir/passes.c.o
-.PHONY : passes.c.o
+src/arch_arm32.c.o:
+	$(MAKE) -f CMakeFiles/mymold.dir/build.make CMakeFiles/mymold.dir/src/arch_arm32.c.o
+.PHONY : src/arch_arm32.c.o
 
-passes.i: passes.c.i
+src/arch_arm32.i: src/arch_arm32.c.i
 
-.PHONY : passes.i
+.PHONY : src/arch_arm32.i
 
 # target to preprocess a source file
-passes.c.i:
-	$(MAKE) -f CMakeFiles/mymold.dir/build.make CMakeFiles/mymold.dir/passes.c.i
-.PHONY : passes.c.i
+src/arch_arm32.c.i:
+	$(MAKE) -f CMakeFiles/mymold.dir/build.make CMakeFiles/mymold.dir/src/arch_arm32.c.i
+.PHONY : src/arch_arm32.c.i
 
-passes.s: passes.c.s
+src/arch_arm32.s: src/arch_arm32.c.s
 
-.PHONY : passes.s
+.PHONY : src/arch_arm32.s
 
 # target to generate assembly for a file
-passes.c.s:
-	$(MAKE) -f CMakeFiles/mymold.dir/build.make CMakeFiles/mymold.dir/passes.c.s
-.PHONY : passes.c.s
+src/arch_arm32.c.s:
+	$(MAKE) -f CMakeFiles/mymold.dir/build.make CMakeFiles/mymold.dir/src/arch_arm32.c.s
+.PHONY : src/arch_arm32.c.s
 
-thunks.o: thunks.c.o
+src/input_file.o: src/input_file.c.o
 
-.PHONY : thunks.o
+.PHONY : src/input_file.o
 
 # target to build an object file
-thunks.c.o:
-	$(MAKE) -f CMakeFiles/mymold.dir/build.make CMakeFiles/mymold.dir/thunks.c.o
-.PHONY : thunks.c.o
+src/input_file.c.o:
+	$(MAKE) -f CMakeFiles/mymold.dir/build.make CMakeFiles/mymold.dir/src/input_file.c.o
+.PHONY : src/input_file.c.o
 
-thunks.i: thunks.c.i
+src/input_file.i: src/input_file.c.i
 
-.PHONY : thunks.i
+.PHONY : src/input_file.i
 
 # target to preprocess a source file
-thunks.c.i:
-	$(MAKE) -f CMakeFiles/mymold.dir/build.make CMakeFiles/mymold.dir/thunks.c.i
-.PHONY : thunks.c.i
+src/input_file.c.i:
+	$(MAKE) -f CMakeFiles/mymold.dir/build.make CMakeFiles/mymold.dir/src/input_file.c.i
+.PHONY : src/input_file.c.i
 
-thunks.s: thunks.c.s
+src/input_file.s: src/input_file.c.s
 
-.PHONY : thunks.s
+.PHONY : src/input_file.s
 
 # target to generate assembly for a file
-thunks.c.s:
-	$(MAKE) -f CMakeFiles/mymold.dir/build.make CMakeFiles/mymold.dir/thunks.c.s
-.PHONY : thunks.c.s
+src/input_file.c.s:
+	$(MAKE) -f CMakeFiles/mymold.dir/build.make CMakeFiles/mymold.dir/src/input_file.c.s
+.PHONY : src/input_file.c.s
 
-xxhash.o: xxhash.c.o
+src/input_sections.o: src/input_sections.c.o
 
-.PHONY : xxhash.o
+.PHONY : src/input_sections.o
 
 # target to build an object file
-xxhash.c.o:
-	$(MAKE) -f CMakeFiles/mymold.dir/build.make CMakeFiles/mymold.dir/xxhash.c.o
-.PHONY : xxhash.c.o
+src/input_sections.c.o:
+	$(MAKE) -f CMakeFiles/mymold.dir/build.make CMakeFiles/mymold.dir/src/input_sections.c.o
+.PHONY : src/input_sections.c.o
 
-xxhash.i: xxhash.c.i
+src/input_sections.i: src/input_sections.c.i
 
-.PHONY : xxhash.i
+.PHONY : src/input_sections.i
 
 # target to preprocess a source file
-xxhash.c.i:
-	$(MAKE) -f CMakeFiles/mymold.dir/build.make CMakeFiles/mymold.dir/xxhash.c.i
-.PHONY : xxhash.c.i
+src/input_sections.c.i:
+	$(MAKE) -f CMakeFiles/mymold.dir/build.make CMakeFiles/mymold.dir/src/input_sections.c.i
+.PHONY : src/input_sections.c.i
 
-xxhash.s: xxhash.c.s
+src/input_sections.s: src/input_sections.c.s
 
-.PHONY : xxhash.s
+.PHONY : src/input_sections.s
 
 # target to generate assembly for a file
-xxhash.c.s:
-	$(MAKE) -f CMakeFiles/mymold.dir/build.make CMakeFiles/mymold.dir/xxhash.c.s
-.PHONY : xxhash.c.s
+src/input_sections.c.s:
+	$(MAKE) -f CMakeFiles/mymold.dir/build.make CMakeFiles/mymold.dir/src/input_sections.c.s
+.PHONY : src/input_sections.c.s
+
+src/output_chunks.o: src/output_chunks.c.o
+
+.PHONY : src/output_chunks.o
+
+# target to build an object file
+src/output_chunks.c.o:
+	$(MAKE) -f CMakeFiles/mymold.dir/build.make CMakeFiles/mymold.dir/src/output_chunks.c.o
+.PHONY : src/output_chunks.c.o
+
+src/output_chunks.i: src/output_chunks.c.i
+
+.PHONY : src/output_chunks.i
+
+# target to preprocess a source file
+src/output_chunks.c.i:
+	$(MAKE) -f CMakeFiles/mymold.dir/build.make CMakeFiles/mymold.dir/src/output_chunks.c.i
+.PHONY : src/output_chunks.c.i
+
+src/output_chunks.s: src/output_chunks.c.s
+
+.PHONY : src/output_chunks.s
+
+# target to generate assembly for a file
+src/output_chunks.c.s:
+	$(MAKE) -f CMakeFiles/mymold.dir/build.make CMakeFiles/mymold.dir/src/output_chunks.c.s
+.PHONY : src/output_chunks.c.s
+
+src/passes.o: src/passes.c.o
+
+.PHONY : src/passes.o
+
+# target to build an object file
+src/passes.c.o:
+	$(MAKE) -f CMakeFiles/mymold.dir/build.make CMakeFiles/mymold.dir/src/passes.c.o
+.PHONY : src/passes.c.o
+
+src/passes.i: src/passes.c.i
+
+.PHONY : src/passes.i
+
+# target to preprocess a source file
+src/passes.c.i:
+	$(MAKE) -f CMakeFiles/mymold.dir/build.make CMakeFiles/mymold.dir/src/passes.c.i
+.PHONY : src/passes.c.i
+
+src/passes.s: src/passes.c.s
+
+.PHONY : src/passes.s
+
+# target to generate assembly for a file
+src/passes.c.s:
+	$(MAKE) -f CMakeFiles/mymold.dir/build.make CMakeFiles/mymold.dir/src/passes.c.s
+.PHONY : src/passes.c.s
+
+src/thunks.o: src/thunks.c.o
+
+.PHONY : src/thunks.o
+
+# target to build an object file
+src/thunks.c.o:
+	$(MAKE) -f CMakeFiles/mymold.dir/build.make CMakeFiles/mymold.dir/src/thunks.c.o
+.PHONY : src/thunks.c.o
+
+src/thunks.i: src/thunks.c.i
+
+.PHONY : src/thunks.i
+
+# target to preprocess a source file
+src/thunks.c.i:
+	$(MAKE) -f CMakeFiles/mymold.dir/build.make CMakeFiles/mymold.dir/src/thunks.c.i
+.PHONY : src/thunks.c.i
+
+src/thunks.s: src/thunks.c.s
+
+.PHONY : src/thunks.s
+
+# target to generate assembly for a file
+src/thunks.c.s:
+	$(MAKE) -f CMakeFiles/mymold.dir/build.make CMakeFiles/mymold.dir/src/thunks.c.s
+.PHONY : src/thunks.c.s
+
+src/xxhash.o: src/xxhash.c.o
+
+.PHONY : src/xxhash.o
+
+# target to build an object file
+src/xxhash.c.o:
+	$(MAKE) -f CMakeFiles/mymold.dir/build.make CMakeFiles/mymold.dir/src/xxhash.c.o
+.PHONY : src/xxhash.c.o
+
+src/xxhash.i: src/xxhash.c.i
+
+.PHONY : src/xxhash.i
+
+# target to preprocess a source file
+src/xxhash.c.i:
+	$(MAKE) -f CMakeFiles/mymold.dir/build.make CMakeFiles/mymold.dir/src/xxhash.c.i
+.PHONY : src/xxhash.c.i
+
+src/xxhash.s: src/xxhash.c.s
+
+.PHONY : src/xxhash.s
+
+# target to generate assembly for a file
+src/xxhash.c.s:
+	$(MAKE) -f CMakeFiles/mymold.dir/build.make CMakeFiles/mymold.dir/src/xxhash.c.s
+.PHONY : src/xxhash.c.s
 
 # Help Target
 help:
@@ -348,30 +348,30 @@ help:
 	@echo "... rebuild_cache"
 	@echo "... edit_cache"
 	@echo "... mymold"
-	@echo "... arch_arm32.o"
-	@echo "... arch_arm32.i"
-	@echo "... arch_arm32.s"
-	@echo "... input_file.o"
-	@echo "... input_file.i"
-	@echo "... input_file.s"
-	@echo "... input_sections.o"
-	@echo "... input_sections.i"
-	@echo "... input_sections.s"
 	@echo "... main.o"
 	@echo "... main.i"
 	@echo "... main.s"
-	@echo "... output_chunks.o"
-	@echo "... output_chunks.i"
-	@echo "... output_chunks.s"
-	@echo "... passes.o"
-	@echo "... passes.i"
-	@echo "... passes.s"
-	@echo "... thunks.o"
-	@echo "... thunks.i"
-	@echo "... thunks.s"
-	@echo "... xxhash.o"
-	@echo "... xxhash.i"
-	@echo "... xxhash.s"
+	@echo "... src/arch_arm32.o"
+	@echo "... src/arch_arm32.i"
+	@echo "... src/arch_arm32.s"
+	@echo "... src/input_file.o"
+	@echo "... src/input_file.i"
+	@echo "... src/input_file.s"
+	@echo "... src/input_sections.o"
+	@echo "... src/input_sections.i"
+	@echo "... src/input_sections.s"
+	@echo "... src/output_chunks.o"
+	@echo "... src/output_chunks.i"
+	@echo "... src/output_chunks.s"
+	@echo "... src/passes.o"
+	@echo "... src/passes.i"
+	@echo "... src/passes.s"
+	@echo "... src/thunks.o"
+	@echo "... src/thunks.i"
+	@echo "... src/thunks.s"
+	@echo "... src/xxhash.o"
+	@echo "... src/xxhash.i"
+	@echo "... src/xxhash.s"
 .PHONY : help
 
 

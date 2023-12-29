@@ -6,65 +6,49 @@
 
 #IncludeRegexTransform: 
 
-/home/jjk/project/mold2/my_mold/arch_arm32.c
-mold.h
-/home/jjk/project/mold2/my_mold/mold.h
-
-/home/jjk/project/mold2/my_mold/bigvector.h
+../include/bigvector.h
 stdlib.h
 -
 
-/home/jjk/project/mold2/my_mold/cmdline.h
+../include/cmdline.h
 common.h
-/home/jjk/project/mold2/my_mold/common.h
+../include/common.h
 
-/home/jjk/project/mold2/my_mold/common.h
+../include/common.h
 mold.h
-/home/jjk/project/mold2/my_mold/mold.h
+../include/mold.h
 
-/home/jjk/project/mold2/my_mold/config.h
+../include/config.h
 
-/home/jjk/project/mold2/my_mold/elf.h
+../include/elf.h
 integers.h
-/home/jjk/project/mold2/my_mold/integers.h
+../include/integers.h
 
-/home/jjk/project/mold2/my_mold/elf_symbol.h
+../include/elf_symbol.h
 mold.h
-/home/jjk/project/mold2/my_mold/mold.h
+../include/mold.h
 
-/home/jjk/project/mold2/my_mold/filetype.h
+../include/filetype.h
 mold.h
-/home/jjk/project/mold2/my_mold/mold.h
+../include/mold.h
 
-/home/jjk/project/mold2/my_mold/hashmap.h
+../include/hashmap.h
 mold.h
-/home/jjk/project/mold2/my_mold/mold.h
+../include/mold.h
 
-/home/jjk/project/mold2/my_mold/input_file.c
-mold.h
-/home/jjk/project/mold2/my_mold/mold.h
-
-/home/jjk/project/mold2/my_mold/input_file.h
+../include/input_file.h
 stdbool.h
 -
 mold.h
-/home/jjk/project/mold2/my_mold/mold.h
+../include/mold.h
 
-/home/jjk/project/mold2/my_mold/input_sections.c
-mold.h
-/home/jjk/project/mold2/my_mold/mold.h
-
-/home/jjk/project/mold2/my_mold/integers.h
+../include/integers.h
 stdint.h
 -
 
-/home/jjk/project/mold2/my_mold/main.c
+../include/mapped_file.h
 mold.h
-/home/jjk/project/mold2/my_mold/mold.h
-
-/home/jjk/project/mold2/my_mold/mapped_file.h
-mold.h
-/home/jjk/project/mold2/my_mold/mold.h
+../include/mold.h
 sys/stat.h
 -
 fcntl.h
@@ -76,7 +60,7 @@ errno.h
 sys/mman.h
 -
 
-/home/jjk/project/mold2/my_mold/mold.h
+../include/mold.h
 stdlib.h
 -
 string.h
@@ -94,9 +78,9 @@ assert.h
 stdarg.h
 -
 uthash.h
-/home/jjk/project/mold2/my_mold/uthash.h
+../include/uthash.h
 new_vector.h
-/home/jjk/project/mold2/my_mold/new_vector.h
+../include/new_vector.h
 fcntl.h
 -
 unistd.h
@@ -104,31 +88,31 @@ unistd.h
 errno.h
 -
 ./elf.h
-/home/jjk/project/mold2/my_mold/elf.h
+../include/elf.h
 bigvector.h
-/home/jjk/project/mold2/my_mold/bigvector.h
+../include/bigvector.h
 config.h
-/home/jjk/project/mold2/my_mold/config.h
+../include/config.h
 mapped_file.h
-/home/jjk/project/mold2/my_mold/mapped_file.h
+../include/mapped_file.h
 symbol.h
-/home/jjk/project/mold2/my_mold/symbol.h
+../include/symbol.h
 output_file.h
-/home/jjk/project/mold2/my_mold/output_file.h
+../include/output_file.h
 filetype.h
-/home/jjk/project/mold2/my_mold/filetype.h
+../include/filetype.h
 input_file.h
-/home/jjk/project/mold2/my_mold/input_file.h
+../include/input_file.h
 cmdline.h
-/home/jjk/project/mold2/my_mold/cmdline.h
+../include/cmdline.h
 hashmap.h
-/home/jjk/project/mold2/my_mold/hashmap.h
+../include/hashmap.h
 elf_symbol.h
-/home/jjk/project/mold2/my_mold/elf_symbol.h
+../include/elf_symbol.h
 output-file-unix.h
-/home/jjk/project/mold2/my_mold/output-file-unix.h
+../include/output-file-unix.h
 
-/home/jjk/project/mold2/my_mold/new_vector.h
+../include/new_vector.h
 stdio.h
 -
 stdlib.h
@@ -136,25 +120,15 @@ stdlib.h
 string.h
 -
 
-/home/jjk/project/mold2/my_mold/output-file-unix.h
+../include/output-file-unix.h
 mold.h
-/home/jjk/project/mold2/my_mold/mold.h
+../include/mold.h
 
-/home/jjk/project/mold2/my_mold/output_chunks.c
+../include/output_file.h
 mold.h
-/home/jjk/project/mold2/my_mold/mold.h
+../include/mold.h
 
-/home/jjk/project/mold2/my_mold/output_file.h
-mold.h
-/home/jjk/project/mold2/my_mold/mold.h
-
-/home/jjk/project/mold2/my_mold/passes.c
-mold.h
-/home/jjk/project/mold2/my_mold/mold.h
-xxhash.h
-/home/jjk/project/mold2/my_mold/xxhash.h
-
-/home/jjk/project/mold2/my_mold/symbol.h
+../include/symbol.h
 stdlib.h
 -
 string.h
@@ -162,13 +136,9 @@ string.h
 stdio.h
 -
 mold.h
-/home/jjk/project/mold2/my_mold/mold.h
+../include/mold.h
 
-/home/jjk/project/mold2/my_mold/thunks.c
-mold.h
-/home/jjk/project/mold2/my_mold/mold.h
-
-/home/jjk/project/mold2/my_mold/xxhash.h
+../include/xxhash.h
 stddef.h
 -
 stdint.h
@@ -209,4 +179,38 @@ mmintrin.h
 -
 string.h
 -
+
+/home/jjk/project/mold2/my_mold/main.c
+mold.h
+/home/jjk/project/mold2/my_mold/mold.h
+
+/home/jjk/project/mold2/my_mold/src/arch_arm32.c
+mold.h
+/home/jjk/project/mold2/my_mold/src/mold.h
+
+/home/jjk/project/mold2/my_mold/src/input_file.c
+mold.h
+/home/jjk/project/mold2/my_mold/src/mold.h
+
+/home/jjk/project/mold2/my_mold/src/input_sections.c
+mold.h
+/home/jjk/project/mold2/my_mold/src/mold.h
+
+/home/jjk/project/mold2/my_mold/src/output_chunks.c
+mold.h
+/home/jjk/project/mold2/my_mold/src/mold.h
+
+/home/jjk/project/mold2/my_mold/src/passes.c
+mold.h
+/home/jjk/project/mold2/my_mold/src/mold.h
+xxhash.h
+/home/jjk/project/mold2/my_mold/src/xxhash.h
+
+/home/jjk/project/mold2/my_mold/src/thunks.c
+mold.h
+/home/jjk/project/mold2/my_mold/src/mold.h
+
+/home/jjk/project/mold2/my_mold/src/xxhash.c
+xxhash.h
+/home/jjk/project/mold2/my_mold/src/xxhash.h
 

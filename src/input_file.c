@@ -192,13 +192,9 @@ void initialize_sections(Context *ctx,ObjectFile *file) {
         section_ptr++;
     }
 
-    printf("Number of sections: %d\n", num_sections);
     file->sections = create_input_sections(num_sections);
     file->num_sections = num_sections;
     for (size_t i = 0; i < file->inputfile.elf_sections_num; ++i) {
-        if(i == 29) {
-            printf("29\n");
-        }
         ElfShdr* shdr = elf_sections[i];
         file->sections[i]->is_alive = true;
         file->sections[i]->is_constucted = false;
@@ -222,7 +218,7 @@ void initialize_sections(Context *ctx,ObjectFile *file) {
                     }
                     continue;
                 }
-                // printf("???%s\n",name);
+
                 file->sections[i]->contents = (StringView *)malloc(sizeof(StringView));
                 file->sections[i]->is_constucted = true;
                 define_input_section(file,ctx,i);              
@@ -263,14 +259,12 @@ void initialize_symbols (Context *ctx,ObjectFile *obj) {
         char *name;
         uint32_t value = (esym->st_name.val[3] << 24) | (esym->st_name.val[2] << 16) | (esym->st_name.val[1] << 8) | esym->st_name.val[0];
         // name = symbol_strtab.data + value;
-        // printf("%s\n",name);
         if (esym->st_type == STT_SECTION) {
             i64 shndx = get_shndx(esym);
             name = (char *)(shstrtab.data + *(u32 *)&(elf_sections[shndx]->sh_name));
         } else {
             name = (char *)(symbol_strtab.data + *(u32 *)&(esym->st_name));
         }
-        // printf("%s\n",name);
         ELFSymbol *sym2 = (ELFSymbol *)malloc(sizeof(ELFSymbol));
         sym_init(sym2);
         sym2->file = obj;

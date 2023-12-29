@@ -29,10 +29,6 @@ void define_input_section(ObjectFile *file,Context *ctx,int i) {
         file->sections[i]->contents->size = (size_t)(*get_shdr(file,i)->sh_size.val);
     }
     const char* startAddress = file->sections[i]->contents->data;
-    // size_t size = file->sections[i]->contents.size;
-    // char* buffer = malloc(size);
-    // memcpy(buffer, startAddress, size);
-    // printf("%s\n", buffer);
     InputSection *section_t = (InputSection *)malloc(sizeof(InputSection));
     file->sections[i]->sh_size = *get_shdr(file,i)->sh_size.val;
     file->sections[i]->shndx = i;

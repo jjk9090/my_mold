@@ -127,10 +127,8 @@ void assign_offsets(Context *ctx,MergedSection *sec) {
         i64 a = *((i64 *)(sec->shard_offsets.data[i - 1]));
         i64 b = *((i64 *)(sizes.data[i - 1]));
         *((i64 *)(sec->shard_offsets.data[i])) = align_to(a + b,alignment);
-        // printf("%ld\n",*((i64 *)(sec->shard_offsets.data[i])));
     }
     i = 0;
-    printf("%ld\n",*((i64 *)(sec->shard_offsets.data[2])));
     HASH_ITER(hh, sec->map, ele, tmp) {
         SectionFragment *frag = (SectionFragment *)ele->value;
         if (frag->is_alive) {
@@ -587,7 +585,6 @@ u64 get_entry_addr(Context *ctx){
 
 void ehdr_copy_buf(Context *ctx,Chunk *chunk) {
     ElfEhdr *hdr = (ElfEhdr *)(ctx->buf + *(u32 *)&(chunk->shdr.sh_offset));
-    // printf("%d\n",sizeof(ElfEhdr));
     memset(hdr, 0, sizeof(ElfEhdr));
     memcpy(hdr->e_ident, "\177ELF", 4);
     hdr->e_ident[EI_CLASS] = ELFCLASS32;

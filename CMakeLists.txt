@@ -13,18 +13,18 @@ endif()
 file(GLOB SOURCES "${CMAKE_SOURCE_DIR}/*.c")
 
 add_executable(mymold
-    ${CMAKE_SOURCE_DIR}/thunks.c
-    ${CMAKE_SOURCE_DIR}/arch_arm32.c
-    ${CMAKE_SOURCE_DIR}/input_sections.c
-    ${CMAKE_SOURCE_DIR}/input_file 
-    ${CMAKE_SOURCE_DIR}/output_chunks.c
-    ${CMAKE_SOURCE_DIR}/xxhash.c
-    ${CMAKE_SOURCE_DIR}/passes.c
+    ${CMAKE_SOURCE_DIR}/src/thunks.c
+    ${CMAKE_SOURCE_DIR}/src/arch_arm32.c
+    ${CMAKE_SOURCE_DIR}/src/input_sections.c
+    ${CMAKE_SOURCE_DIR}/src/input_file 
+    ${CMAKE_SOURCE_DIR}/src/output_chunks.c
+    ${CMAKE_SOURCE_DIR}/src/xxhash.c
+    ${CMAKE_SOURCE_DIR}/src/passes.c
     ${CMAKE_SOURCE_DIR}/main.c
 )
 # 添加头文件目录
 target_include_directories(mymold PRIVATE
-    ${CMAKE_SOURCE_DIR}
+    ${CMAKE_SOURCE_DIR}/include
 )
 # 更改可执行文件的输出路径
 set(EXECUTABLE_OUTPUT_PATH ${CMAKE_SOURCE_DIR})

@@ -46,7 +46,6 @@ static inline char ** parse_nonpositional_args(Context *ctx) {
         if (!strcmp(*args,"-o")) {
             args = args + 1; 
             arg = *args;
-            printf("arg: %s\n",arg);
             ctx->arg.output = strdup(arg);
         } else if (!strcmp(*args,"--no-fork")) {
             ctx->arg.fork = false;

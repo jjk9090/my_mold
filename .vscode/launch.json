@@ -12,7 +12,7 @@
               "b.o"
             ],
             "stopAtEntry": false,
-            "cwd": "${workspaceFolder}/test_demo/demo",
+            "cwd": "${workspaceFolder}/test",
             "environment": [],
             "externalConsole": false,
             "MIMode": "gdb",

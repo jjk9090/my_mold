@@ -710,9 +710,6 @@ void create_output_sections(Context *ctx) {
     for (int i = 0; i < chunks.size; i++) {
         // 获取当前元素
         Chunk* currentElement = temp2[i];
-        // printf("name: %s\n", currentElement->name);
-        // 将chunks加入ctx->chunks
-        // VectorAdd(&(ctx->chunks),ctx->phdr->chunk,sizeof(Chunk *));
         VectorAdd(&(ctx->chunks),temp2[i],(sizeof(Chunk *)));
     } 
     
@@ -1060,26 +1057,8 @@ int compare_chunks_out(const void* a, const void* b) {
 void sort_output_sections_regular(Context *ctx) {
     global_ctx = ctx;
     size_t size = ctx->chunks.size;
-    // Chunk *temp1[ctx->chunks.size];
-    // for (int i = 0; i < ctx->chunks.size; i++) {
-    //     temp1[i] = (Chunk *)(ctx->chunks.data[i]);
-    // }
-    // qsort(temp1, ctx->chunks.size, sizeof(Chunk *), compare_chunks_out);
-    qsort(ctx->chunks.data, ctx->chunks.size, sizeof(Chunk *), compare_chunks_out);
-    for (int i = 0; i < size; i++) {
-        // 获取当前元素
-        Chunk* currentElement = ctx->chunks.data[i];
-        // printf("finalname: %s\n", currentElement->name);
-    } 
-    // ctx->chunks.data = NULL;
-    // VectorNew(&(ctx->chunks),1);
-    // // 验证
-    // for (int i = 0; i < size; i++) {
-    //     // 获取当前元素
-    //     Chunk* currentElement = temp1[i];
-    //     printf("finalname: %s\n", currentElement->name);
-    //     VectorAdd(&(ctx->chunks),currentElement,sizeof(Chunk *));
-    // } 
+
+    qsort(ctx->chunks.data, ctx->chunks.size, sizeof(Chunk *), compare_chunks_out); 
 }
 
 void sort_output_sections(Context *ctx) {
@@ -1146,17 +1125,11 @@ void compute_section_headers(Context *ctx) {
     int p = 0;
     // 所有输出段更新shdr
     update_shdr(ctx);
-    for (int i = 0; i < ctx->chunks.size; i++) {
-        // 获取当前元素
-        Chunk* currentElement = ctx->chunks.data[i];
-        printf("pre-name: %s\n", currentElement->name);
-    } 
+
     // Remove empty chunks.
     for (int i = 0; i < ctx->chunks.size; ) {
         Chunk *chunk = ctx->chunks.data[i];
-        if(i == ctx->chunks.size - 1) {
-            printf("SHDR\n");
-        }
+        
         u32 *size = (u32 *)&(chunk->shdr.sh_size);
         if (kind(chunk) != OUTPUT_SECTION  & *size == 0) {
             // 删除当前元素
@@ -1180,12 +1153,6 @@ void compute_section_headers(Context *ctx) {
         *(u32 *)&(ctx->shdr->chunk->shdr.sh_size) = shndx * sizeof(ElfShdr);
 
     update_shdr(ctx);  
-    // if (ctx.symtab_shndx) {
-    for (int i = 0; i < ctx->chunks.size; i++) {
-        // 获取当前元素
-        Chunk* currentElement = ctx->chunks.data[i];
-        printf("name: %s\n", currentElement->name);
-    } 
 }
 
 i64 get_flags(Context *ctx,Chunk *chunk) {
