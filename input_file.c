@@ -1,9 +1,9 @@
 
 #include "mold.h"
 #define Fatal(ctx) printf("%s: ", ctx)
-bool is_undef(ElfSym *sym) { return *sym->st_shndx.val == SHN_UNDEF; }
-bool is_abs(ElfSym *sym) { return *sym->st_shndx.val == SHN_ABS; }
-bool is_common(ElfSym *sym) { return *sym->st_shndx.val == SHN_COMMON; }
+bool is_undef(ElfSym *sym) { return *(u16 *)&(sym->st_shndx) == SHN_UNDEF; }
+bool is_abs(ElfSym *sym) { return *(u16 *)&(sym->st_shndx) == SHN_ABS; }
+bool is_common(ElfSym *sym) { return *(u16 *)&(sym->st_shndx) == SHN_COMMON; }
 bool is_weak(ElfSym *sym) { return sym->st_bind == STB_WEAK; }
 bool is_undef_weak(ElfSym *sym) { return is_undef(sym) && is_weak(sym); }
 
@@ -179,6 +179,7 @@ ObjectFile * objectfile_create(Context *ctx,MappedFile *mf,char *archive_name, b
     obj->fde_idx = 0;
     obj->fde_offset = 0;
     obj->fde_size = 0;
+    obj->has_common_symbol = false;
     return obj;
 }
 
@@ -194,7 +195,10 @@ void initialize_sections(Context *ctx,ObjectFile *file) {
     printf("Number of sections: %d\n", num_sections);
     file->sections = create_input_sections(num_sections);
     file->num_sections = num_sections;
-    for (size_t i = 0; elf_sections[i] != NULL; ++i) {
+    for (size_t i = 0; i < file->inputfile.elf_sections_num; ++i) {
+        if(i == 29) {
+            printf("29\n");
+        }
         ElfShdr* shdr = elf_sections[i];
         file->sections[i]->is_alive = true;
         file->sections[i]->is_constucted = false;
@@ -211,7 +215,7 @@ void initialize_sections(Context *ctx,ObjectFile *file) {
             case SHT_NULL:
                 break;
             default: {
-                uint16_t value = (shdr->sh_name.val[1] << 8) | shdr->sh_name.val[0];
+                uint16_t value = *(u32 *)&(shdr->sh_name);
                 char *name = (char *)(shstrtab.data + value);
                 if (!strcmp(name,".note.GNU-stack") && !ctx->arg.relocatable) {
                     if (*shdr->sh_flags.val & SHF_EXECINSTR) {
@@ -228,7 +232,7 @@ void initialize_sections(Context *ctx,ObjectFile *file) {
     }
 
     sections = file->sections;
-    for (size_t i = 0; elf_sections[i] != NULL; ++i) {
+    for (size_t i = 0; i < file->inputfile.elf_sections_num; ++i) {
         ElfShdr* shdr = elf_sections[i];
         if (*shdr->sh_type.val != (target.is_rela ? SHT_RELA : SHT_REL))
             continue;
@@ -249,6 +253,11 @@ void initialize_symbols (Context *ctx,ObjectFile *obj) {
     VectorAdd(&local_syms,sym,sizeof(ELFSymbol *));
     // 70c8 0x7ffff7fc70b8 0x7ffff7fc70a8
     i64 i = 0;
+    ELFSymbol *start_sym = (ELFSymbol *)malloc(sizeof(ELFSymbol));
+    sym_init(start_sym);
+    VectorAdd(&symbols,start_sym,sizeof(ElfSym *));
+    ElfSym *esym0 = (ElfSym *)(elf_syms + 0);
+    VectorAdd(&(obj->inputfile.elf_syms),esym0,sizeof(ElfSym *));
     for (i = 2; i < first_global * 2; i = i + 2) {
         ElfSym *esym = (ElfSym *)(elf_syms + i);
         char *name;
@@ -257,9 +266,9 @@ void initialize_symbols (Context *ctx,ObjectFile *obj) {
         // printf("%s\n",name);
         if (esym->st_type == STT_SECTION) {
             i64 shndx = get_shndx(esym);
-            name = (char *)(shstrtab.data + *elf_sections[shndx]->sh_name.val);
+            name = (char *)(shstrtab.data + *(u32 *)&(elf_sections[shndx]->sh_name));
         } else {
-            name = (char *)(symbol_strtab.data + *esym->st_name.val);
+            name = (char *)(symbol_strtab.data + *(u32 *)&(esym->st_name));
         }
         // printf("%s\n",name);
         ELFSymbol *sym2 = (ELFSymbol *)malloc(sizeof(ELFSymbol));
@@ -267,10 +276,13 @@ void initialize_symbols (Context *ctx,ObjectFile *obj) {
         sym2->file = obj;
         sym2->nameptr = strdup(name);
         sym2->namelen = strlen(name);
-        sym2->value = (u64)(esym->st_value.val);
-        sym2->sym_idx = i - 1;
+        sym2->value = *(u32 *)&(esym->st_value);
+        sym2->sym_idx = (i + 1) / 2;
         VectorAdd(&local_syms,sym2,sizeof(ELFSymbol *));
         VectorAdd(&(obj->inputfile.elf_syms),esym,sizeof(ElfSym *));
+
+        if (!is_abs(esym))
+            set_input_section(obj->sections[get_shndx(esym)],sym2);
         // Vectorpush_back(&local_syms,&sym2);
     }
     VectorNew(&(obj->inputfile.local_syms),10);
@@ -292,9 +304,12 @@ void initialize_symbols (Context *ctx,ObjectFile *obj) {
         ElfSym *esym = (ElfSym *)(elf_syms + i * 2);
         char *key = (char *)(symbol_strtab.data + *esym->st_name.val);
         char *name = key;
+        VectorAdd(&(obj->inputfile.elf_syms),esym,sizeof(ElfSym *));
+        
         ELFSymbol *symbol = insert_symbol(ctx,key,name);
         sym_init(symbol);
-        symbol->file = obj;
+        symbol->file = NULL;
+        symbol->sym_idx = i;  
         VectorAdd(&symbols,symbol,sizeof(ELFSymbol *));
     }
     obj->inputfile.symbols = symbols;
@@ -322,6 +337,7 @@ void parse(Context *ctx,ObjectFile *obj) {
         symbol_strtab = get_string(ctx,elf_sections[idx]);
         obj->inputfile.symbol_strtab = symbol_strtab;
     }
+    VectorNew(&symbols,1);
 
     initialize_sections(ctx,obj);
     initialize_symbols(ctx,obj);
@@ -348,9 +364,11 @@ static u64 get_rank (Inputefile *file,ElfSym *esym, bool is_in_archive) {
 }
 
 static u64 get_rank_single_sym(ELFSymbol *sym,i64 i) {
-    if (!sym->file)
-        return 7 << 24;
-    return get_rank(&(sym->file->inputfile), esym(&(sym->file->inputfile),i), !(&(sym->file->inputfile))->is_alive);
+    if(sym) {
+        if (!sym->file)
+            return 7 << 24;
+        return get_rank(&(sym->file->inputfile), esym(&(sym->file->inputfile),i), !sym->file->inputfile.is_alive);
+    }
 }
 
 // 定义函数，用于创建一个智能指针，并初始化引用计数为 1
@@ -436,7 +454,7 @@ MergeableSection *split_section(Context *ctx,InputSection *sec,ObjectFile *file,
     rec->p2align = sec->p2align;
     if (sec->sh_size == 0) 
         return sec;
-    input_sec_uncompress(ctx,file,i);
+    input_sec_uncompress(ctx,file,sec,i);
 
     StringView *data = sec->contents;
     const char *begin = data->data;
@@ -476,9 +494,9 @@ MergeableSection *split_section(Context *ctx,InputSection *sec,ObjectFile *file,
 }
 
 void initialize_mergeable_sections(Context *ctx,ObjectFile *file) {
-    VectorNew(&(file->mergeable_sections),file->num_sections);
+    VectorNew(&(file->mergeable_sections),file->inputfile.elf_sections_num);
 
-    for (i64 i = 1; i < num_sections; i++) {
+    for (i64 i = 1; i < file->inputfile.elf_sections_num; i++) {
         if (file->sections == NULL)
             break;
         InputSection *isec = file->sections[i];
@@ -541,7 +559,7 @@ void file_resolve_section_pieces(Context *ctx,ObjectFile *file) {
      
 
     // Attach section pieces to symbols.
-    for (i64 i = 1;; i++) {
+    for (i64 i = 1;i < file->inputfile.elf_syms.size; i++) {
         if (file->inputfile.symbols.data == NULL)
             break;
         ELFSymbol *sym = (ELFSymbol *)file->inputfile.symbols.data[i];
@@ -577,7 +595,7 @@ void file_resolve_section_pieces(Context *ctx,ObjectFile *file) {
             // } 0
         }
     }
-
+    VectorNew(&(file->inputfile.frag_syms),nfrag_syms);
     i64 idx = 0;
     for (int i = 0;;i++) {
         if (file->sections == NULL)
@@ -585,7 +603,7 @@ void file_resolve_section_pieces(Context *ctx,ObjectFile *file) {
         InputSection *isec = file->sections[i];
         if (isec == NULL) 
             break;
-        if (!isec && !isec->is_alive && !(*get_shdr(file,i)->sh_flags.val & SHF_ALLOC)) {
+        if (!isec && !isec->is_alive && !(*get_shdr(file,isec->shndx)->sh_flags.val & SHF_ALLOC)) {
             // for(int j = 0;;j++) {
             //     ElfRel *r = get_rels();
             // }
@@ -594,10 +612,9 @@ void file_resolve_section_pieces(Context *ctx,ObjectFile *file) {
 }
 
 void obj_resolve_symbols(Context *ctx,ObjectFile *obj) {
-  for (i64 i = obj->inputfile.first_global; i < obj->inputfile.elf_syms_num; i++) {
-    ELFSymbol *sym = obj->inputfile.symbols.data[i];
-    ElfSym *esym =  obj->inputfile.elf_syms.data[i];
-
+  for (i64 i = obj->inputfile.first_global; i < obj->inputfile.elf_syms.size; i++) {
+    ELFSymbol *sym = (ELFSymbol *)obj->symbols.data[i];
+    ElfSym *esym =  (ElfSym *)obj->inputfile.elf_syms.data[i];
     if (is_undef(esym))
       continue;
 
@@ -607,7 +624,8 @@ void obj_resolve_symbols(Context *ctx,ObjectFile *obj) {
       if (!isec || !isec->is_alive)
         continue;
     }
-
+    u64 left = get_rank(&(obj->inputfile), esym, !obj->inputfile.is_alive);
+    u64 right = get_rank_single_sym(sym,i);
     if (get_rank(&(obj->inputfile), esym, !obj->inputfile.is_alive) < get_rank_single_sym(sym,i)) {
       sym->file = obj;
       set_input_section(isec,sym);
@@ -620,7 +638,7 @@ void obj_resolve_symbols(Context *ctx,ObjectFile *obj) {
 }
 
 void obj_scan_relocations(Context *ctx,ObjectFile *file) {
-    for(int i = 0;;i++) {
+    for(int i = 0;i < file->inputfile.elf_sections_num;i++) {
         if (file == NULL || file->sections == NULL)
             break;
         InputSection *isec = file->sections[i];
@@ -640,7 +658,7 @@ void scan_relocations(Context *ctx) {
 }
 
 static bool should_write_to_local_symtab(Context *ctx, ELFSymbol *sym,int i,ObjectFile *file) {
-    if (elfsym_get_type(file,i) == STT_SECTION)
+    if (elfsym_get_type(file,i + 1) == STT_SECTION)
         return false;
     if (starts_with(sym->nameptr,".L")) {
         if (ctx->arg.discard_locals)
@@ -701,17 +719,18 @@ void obj_compute_symtab_size(Context *ctx,ObjectFile *file) {
     }
 }
 
-void write_sym(ELFSymbol *sym, i64 idx,Context *ctx,ElfSym *symtab_base,u8 *strtab_base,i64 strtab_off) {
+void write_sym(ELFSymbol *sym, i64 idx,Context *ctx,ElfSym *symtab_base,u8 *strtab_base,i64 *strtab_off,ObjectFile *file) {
     U32 *xindex = NULL;
-    // symtab_base[idx] = to_output_esym(ctx, sym, strtab_off, xindex);
-    strtab_off += write_string(strtab_base + strtab_off, sym->nameptr);
+    symtab_base[idx] = to_output_esym(ctx, sym, *strtab_off, xindex,file);
+    *strtab_off += write_string(strtab_base + *strtab_off, sym->nameptr);
 };
 
 void obj_populate_symtab(Context *ctx,ObjectFile *file) {
     ElfSym *symtab_base = (ElfSym *)(ctx->buf + *(u32 *)&(ctx->symtab->chunk->shdr.sh_offset));
 
     u8 *strtab_base = ctx->buf + *(u32 *)&(ctx->strtab->chunk->shdr.sh_offset);
-    i64 strtab_off = file->inputfile.strtab_offset;
+    i64 *strtab_off = (i64 *)malloc(sizeof(i64));
+    *strtab_off = file->inputfile.strtab_offset;
 
     i64 local_symtab_idx = file->inputfile.local_symtab_idx;
     i64 global_symtab_idx = file->inputfile.global_symtab_idx;
@@ -719,7 +738,21 @@ void obj_populate_symtab(Context *ctx,ObjectFile *file) {
     for (i64 i = 1; i < file->inputfile.first_global; i++) {
         ELFSymbol *sym = file->symbols.data[i];
         if (sym->write_to_symtab)
-            write_sym(sym, local_symtab_idx++,ctx,symtab_base,strtab_base,strtab_off);
+            write_sym(sym, local_symtab_idx++,ctx,symtab_base,strtab_base,strtab_off,file);
     }
-        
+    
+    for (i64 i = file->inputfile.first_global;i < file->inputfile.elf_syms.size;i++) {
+        ELFSymbol *sym = file->symbols.data[i];
+        if(sym->file == file && sym->write_to_symtab) {
+            if (is_local(ctx,sym,file,i)) 
+                write_sym(sym, local_symtab_idx++,ctx,symtab_base,strtab_base,strtab_off,file);
+            else 
+                write_sym(sym, global_symtab_idx++,ctx,symtab_base,strtab_base,strtab_off,file);
+        }
+    }
+}
+
+void file_convert_common_symbols(Context *ctx,ObjectFile *obj) {
+    if (!obj->has_common_symbol)
+        return;
 }

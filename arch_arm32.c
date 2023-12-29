@@ -1,6 +1,6 @@
 #include "mold.h"
 void isec_scan_relocations(Context *ctx,ObjectFile *file,int i,InputSection *isec) {
-    assert(*get_shdr(file,i)->sh_flags.val & SHF_ALLOC);
+    assert(*get_shdr(file,isec->shndx)->sh_flags.val & SHF_ALLOC);
     isec->reldyn_offset = file->num_dynrel * sizeof(ElfRel);
     StringView rels = get_rels(ctx,file,isec);
 

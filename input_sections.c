@@ -13,7 +13,7 @@ int64_t to_p2align(uint64_t alignment) {
     return count;
 }
 
-void input_sec_uncompress(Context *ctx,ObjectFile *file,int i) {
+void input_sec_uncompress(Context *ctx,ObjectFile *file,InputSection * isec,int i) {
     if (!(*get_shdr(file,i)->sh_flags.val & SHF_COMPRESSED) || file->sections[i]->uncompressed)
         return;
 
@@ -42,7 +42,7 @@ void define_input_section(ObjectFile *file,Context *ctx,int i) {
     section_t = file->sections[i];
 
     if (!target.is_rela) {
-        input_sec_uncompress(ctx,file,i);
+        input_sec_uncompress(ctx,file,section_t,i);
     }
     
 }
@@ -66,10 +66,11 @@ void apply_reloc_alloc(Context *ctx,u8 *base,InputSection *isec) {
 }
 
 void isec_write_to(Context *ctx,u8 *buf,InputSection *isec,int i) {
-    ElfShdr *shdr  = get_shdr(isec->file,i);
+    ElfShdr *shdr  = get_shdr(isec->file,isec->shndx);
     if(*(u32 *)&(shdr->sh_type) == SHT_NOBITS || isec->sh_size == 0)
         return;
 
+    // Copy data
     uncompress_to(ctx, buf,shdr,isec);
 
     if (!ctx->arg.relocatable) {

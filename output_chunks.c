@@ -41,7 +41,6 @@ MergedSection *get_instance(Context *ctx, char *name,
     if (osec)
         return osec;
     else {
-        VectorNew(&ctx->merged_sections,1);
         osec = MergedSection_create(name, flags, type, entsize, osec);
         VectorAdd(&ctx->merged_sections,osec,sizeof(MergedSection *));
         ctx->merged_sections_count++;
@@ -228,7 +227,7 @@ void eh_frame_construct(Context *ctx) {
 }
 
 bool is_bss(Chunk *chunk) {
-    return *chunk->shdr.sh_type.val == SHT_NOBITS;
+    return *(u32 *)&(chunk->shdr.sh_type) == SHT_NOBITS;
 };
 
 bool is_tbss(Chunk *chunk) {
@@ -244,24 +243,24 @@ int compare_output_phdr(const void* a, const void* b) {
 
 void define(u64 type, u64 flags, Chunk *chunk,vector *vec) {
     ElfPhdr *phdr = (ElfPhdr *)malloc(sizeof(ElfPhdr));
-    *phdr->p_type.val = type;
-    *phdr->p_flags.val = flags;
-    *phdr->p_align.val = *chunk->shdr.sh_addralign.val;
-    *phdr->p_offset.val = *chunk->shdr.sh_offset.val;
+    *(u32 *)&(phdr->p_type) = type;
+    *(u32 *)&(phdr->p_flags) = flags;
+    *(u32 *)&(phdr->p_align) = *(u32 *)&(chunk->shdr.sh_addralign);
+    *(u32 *)&(phdr->p_offset) = *(u32 *)&(chunk->shdr.sh_offset);
 
     if (*chunk->shdr.sh_type.val != SHT_NOBITS)
-        *phdr->p_filesz.val = *chunk->shdr.sh_size.val;
+        *(u32 *)&(phdr->p_filesz) = *(u32 *)&(chunk->shdr.sh_size);
 
-    *phdr->p_vaddr.val = *chunk->shdr.sh_addr.val;
-    *phdr->p_paddr.val = *chunk->shdr.sh_addr.val;
+    *(u32 *)&(phdr->p_vaddr) = *(u32 *)&(chunk->shdr.sh_addr);
+    *(u32 *)&(phdr->p_paddr) = *(u32 *)&(chunk->shdr.sh_addr);
 
     if (*chunk->shdr.sh_flags.val & SHF_ALLOC)
-        *phdr->p_memsz.val = *chunk->shdr.sh_size.val;
+        *(u32 *)&(phdr->p_memsz) = *(u32 *)&(chunk->shdr.sh_size);
     VectorAdd(vec,phdr,sizeof(ElfPhdr *));
 }
 
 bool is_note(Chunk *chunk) {
-    return *chunk->shdr.sh_type.val == SHT_NOTE;
+    return *(u32 *)&(chunk->shdr.sh_type) == SHT_NOTE;
 }
 
 i64 to_phdr_flags(Context *ctx, Chunk *chunk) {
@@ -281,9 +280,9 @@ i64 to_phdr_flags(Context *ctx, Chunk *chunk) {
 
 void phdr_append(Chunk *chunk,vector vec) {
     ElfPhdr *phdr = vec.data[vec.size - 1];
-    *phdr->p_align.val = *phdr->p_align.val > *chunk->shdr.sh_addralign.val ? *phdr->p_align.val : *chunk->shdr.sh_addralign.val;
-    *phdr->p_memsz.val = *chunk->shdr.sh_addr.val + *chunk->shdr.sh_size.val - *phdr->p_vaddr.val;
-    if (*chunk->shdr.sh_type.val != SHT_NOBITS)
+    *(u32 *)&(phdr->p_align) = *(u32 *)&(phdr->p_align) > *(u32 *)&(chunk->shdr.sh_addralign) ? *(u32 *)&(phdr->p_align) : *(u32 *)&(chunk->shdr.sh_addralign);
+    *(u32 *)&(phdr->p_memsz) = *(u32 *)&(chunk->shdr.sh_addr) + *(u32 *)&(chunk->shdr.sh_size) - *(u32 *)&(phdr->p_vaddr);
+    if (*(u32 *)&(chunk->shdr.sh_type) != SHT_NOBITS)
         phdr->p_filesz = phdr->p_memsz;
 };
 
@@ -306,8 +305,8 @@ vector create_phdr(Context *ctx) {
         define(PT_PHDR, PF_R, ctx->phdr->chunk,&vec);
     
     // Create a PT_INTERP.
-    // if (ctx->interp)
-    //     define(PT_INTERP, PF_R, ctx->interp);
+    if (ctx->interp)
+        define(PT_INTERP, PF_R, ctx->interp->chunk,&vec);
 
     // Create a PT_NOTE for SHF_NOTE sections.
     for(i64 i = 0;i < chunks.size;) {
@@ -325,22 +324,27 @@ vector create_phdr(Context *ctx) {
 
     // Create PT_LOAD segments.
     for(i64 i = 0;i < chunks.size;) {
+        ElfPhdr *temp1;
+        if(vec.size > 0)
+            temp1 = vec.data[vec.size - 1];
         Chunk *first = chunks.data[i++];
         i64 flags = to_phdr_flags(ctx,first);
         define(PT_LOAD, flags, first,&vec);
-
         // i32 s = *((ElfPhdr *)(vec.data[vec.size - 1]))->p_align.val;
-        *((ElfPhdr *)(vec.data[vec.size - 1]))->p_align.val = 
-                ctx->page_size > *((ElfPhdr *)(vec.data[vec.size - 1]))->p_align.val 
+        *(u32 *)&((ElfPhdr *)(vec.data[vec.size - 1]))->p_align = 
+                ctx->page_size > *(u32 *)&((ElfPhdr *)(vec.data[vec.size - 1]))->p_align 
                 ? ctx->page_size 
-                : *((ElfPhdr *)(vec.data[vec.size - 1]))->p_align.val;
+                : *(u32 *)&((ElfPhdr *)(vec.data[vec.size - 1]))->p_align;
         
+        ElfPhdr *temp = vec.data[vec.size - 1];
+        // Add contiguous ALLOC sections as long as they have the same
+        // section flags and there's no on-disk gap in between.
         if (!is_bss(first))
             while (i < chunks.size &&
                     !is_bss(chunks.data[i]) &&
                     to_phdr_flags(ctx, chunks.data[i]) == flags &&
-                    *((Chunk *)(chunks.data[i]))->shdr.sh_offset.val - *first->shdr.sh_offset.val ==
-                    *((Chunk *)(chunks.data[i]))->shdr.sh_addr.val - *first->shdr.sh_addr.val)
+                    *(u32 *)&(((Chunk *)(chunks.data[i]))->shdr.sh_offset) - *(u32 *)&(first->shdr.sh_offset) ==
+                    *(u32 *)&(((Chunk *)(chunks.data[i]))->shdr.sh_addr) - *(u32 *)&(first->shdr.sh_addr.val))
                 phdr_append(chunks.data[i++],vec);
         
         while (i < chunks.size &&
@@ -348,7 +352,7 @@ vector create_phdr(Context *ctx) {
             to_phdr_flags(ctx, chunks.data[i]) == flags)
             phdr_append(chunks.data[i++],vec);
     }
-
+    
     // Create a PT_TLS.
     for(i64 i = 0;i < ctx->chunks.size;) {
         Chunk *first = ctx->chunks.data[i++];
@@ -373,13 +377,10 @@ vector create_phdr(Context *ctx) {
     {
         ElfPhdr *phdr = (ElfPhdr *)malloc(sizeof(ElfPhdr));
         // *phdr->p_type.val = PT_GNU_STACK;
-        phdr->p_type.val[0] = (PT_GNU_STACK >> 24) & 0xFF;
-        phdr->p_type.val[1] = (PT_GNU_STACK >> 16) & 0xFF;
-        phdr->p_type.val[2] = (PT_GNU_STACK >> 8) & 0xFF;
-        phdr->p_type.val[3] = PT_GNU_STACK & 0xFF;
-        *phdr->p_flags.val = ctx->arg.z_execstack ? (PF_R | PF_W | PF_X) : (PF_R | PF_W);
-        *phdr->p_memsz.val = ctx->arg.z_stack_size;
-        *phdr->p_align.val = 1;
+        *(u32 *)&(phdr->p_type) = PT_GNU_STACK;
+        *(u32 *)&(phdr->p_flags) = ctx->arg.z_execstack ? (PF_R | PF_W | PF_X) : (PF_R | PF_W);
+        *(u32 *)&(phdr->p_memsz) = ctx->arg.z_stack_size;
+        *(u32 *)&(phdr->p_align) = 1;
         VectorAdd(&vec,phdr,sizeof(ElfPhdr *));
     }
 
@@ -391,7 +392,7 @@ vector create_phdr(Context *ctx) {
                 define(PT_GNU_RELRO, PF_R, first,&vec);
                 while (i < chunks.size && ((Chunk *)chunks.data[i])->is_relro)
                     phdr_append(chunks.data[i++],vec);
-                *((ElfPhdr *)vec.data[vec.size - 1])->p_align.val = 1;
+                *(u32 *)&(((ElfPhdr *)vec.data[vec.size - 1])->p_align) = 1;
             }
         }
     }
@@ -409,10 +410,7 @@ void output_phdr_update_shdr(Context *ctx,Chunk *chunk) {
     // ElfPhdr
     ctx->phdr->phdrs = create_phdr(ctx);
     u32 s = ctx->phdr->phdrs.size * sizeof(ElfPhdr);
-    chunk->shdr.sh_size.val[0] = s & 0xFF;
-    chunk->shdr.sh_size.val[1] = (s >> 8) & 0xFF;
-    chunk->shdr.sh_size.val[2] = (s >> 16) & 0xFF;
-    chunk->shdr.sh_size.val[3] = (s >> 24) & 0xFF;
+    *(u32 *)&(chunk->shdr.sh_size) = ctx->phdr->phdrs.size * sizeof(ElfPhdr);
     // 剩下的貌似与线程有关 不写了
 }
 
@@ -462,11 +460,15 @@ void shstrtab_update_shdr(Context *ctx,Chunk *chunk) {
     for(int i = 0;i < ctx->chunks.size;i++) {
         Chunk *chunk = ctx->chunks.data[i];
         if (kind(chunk) != HEADER && strlen(chunk->name) != 0) {
-            *chunk->shdr.sh_name.val = offset;
+            *(u32 *)&(chunk->shdr.sh_name) = offset;
+            i64 *sin = (i64 *)malloc(sizeof(i64));
+            *sin = offset;
+            // ctx->shstrtab
+            merger_sec_insert_element(ctx->gloval_merge_sec,chunk->name,sin);
             offset += strlen(chunk->name) + 1;
         }
     }
-    *chunk->shdr.sh_size.val = offset;
+    *(u32 *)&(chunk->shdr.sh_size) = offset;
 }
 
 void symtab_update_shdr(Context *ctx,Chunk *chunk) {
@@ -506,7 +508,7 @@ void symtab_update_shdr(Context *ctx,Chunk *chunk) {
 }
 
 void gotplt_update_shdr(Context *ctx,Chunk *chunk) {
-    *chunk->shdr.sh_size.val = ctx->gotplt->HDR_SIZE + ctx->plt->symbols.size * ctx->gotplt->ENTRY_SIZE;
+    *(u32 *)&(chunk->shdr.sh_size) = ctx->gotplt->HDR_SIZE + ctx->plt->symbols.size * ctx->gotplt->ENTRY_SIZE;
 }
 
 void plt_update_shdr(Context *ctx,Chunk *chunk) {
@@ -523,8 +525,8 @@ void relplt_update_shdr(Context *ctx,Chunk *chunk) {
 }
 
 void dynsym_update_shdr(Context *ctx,Chunk *chunk) {
-    *chunk->shdr.sh_link.val = ctx->dynstr->chunk->shndx;
-    *chunk->shdr.sh_size.val = sizeof(ElfSym) * ctx->dynsym->symbols.size;
+    *(u32 *)&(chunk->shdr.sh_link) = ctx->dynstr->chunk->shndx;
+    *(u32 *)&(chunk->shdr.sh_size) = sizeof(ElfSym) * ctx->dynsym->symbols.size;
 }
 
 void hash_update_shdr(Context *ctx,Chunk *chunk) {
@@ -532,8 +534,8 @@ void hash_update_shdr(Context *ctx,Chunk *chunk) {
         return;
     i64 header_size = 8;
     i64 num_slots = ctx->dynsym->symbols.size;
-    *chunk->shdr.sh_size.val = header_size + num_slots * 8;
-    *chunk->shdr.sh_link.val = ctx->dynsym->chunk->shndx;
+    *(u32 *)&(chunk->shdr.sh_size) = header_size + num_slots * 8;
+    *(u32 *)&(chunk->shdr.sh_link) = ctx->dynsym->chunk->shndx;
 }
 
 void gnu_hash_update_shdr(Context *ctx,Chunk *chunk) {
@@ -560,6 +562,14 @@ void gnu_version_r_update_shdr(Context *ctx,Chunk *chunk) {
     *chunk->shdr.sh_link.val = ctx->dynstr->chunk->shndx;
 }
 
+void erframe_hdr_update_shdr (Context *ctx,Chunk *chunk) {
+    ctx->eh_frame_hdr->num_fdes = 0;
+    for(int i = 0;i < ctx->objs.size;i++) {
+        ObjectFile *file = ctx->objs.data[i];
+        ctx->eh_frame_hdr->num_fdes += file->fdes.size;
+    }
+    *(u32 *)&(chunk->shdr.sh_size) = ctx->eh_frame_hdr->HEADER_SIZE + ctx->eh_frame_hdr->num_fdes * 8;
+}
 u64 get_entry_addr(Context *ctx){
     if (ctx->arg.relocatable)
         return 0;
@@ -576,50 +586,55 @@ u64 get_entry_addr(Context *ctx){
 };
 
 void ehdr_copy_buf(Context *ctx,Chunk *chunk) {
-    ElfEhdr *hdr = (ElfEhdr *)(ctx->buf + *chunk->shdr.sh_offset.val);
+    ElfEhdr *hdr = (ElfEhdr *)(ctx->buf + *(u32 *)&(chunk->shdr.sh_offset));
+    // printf("%d\n",sizeof(ElfEhdr));
     memset(hdr, 0, sizeof(ElfEhdr));
     memcpy(hdr->e_ident, "\177ELF", 4);
     hdr->e_ident[EI_CLASS] = ELFCLASS32;
     hdr->e_ident[EI_DATA] = ELFDATA2LSB;
     hdr->e_ident[EI_VERSION] = EV_CURRENT;
-    *hdr->e_machine.val = target.e_machine;
-    *hdr->e_version.val = EV_CURRENT;
+    *(u16 *)&(hdr->e_machine) = target.e_machine;
+    *(u32 *)&(hdr->e_version) = EV_CURRENT;
     *(u32 *)(&(hdr->e_entry)) = get_entry_addr(ctx);
     *(u32 *)(&(hdr->e_flags)) = get_eflags(ctx);
-    *hdr->e_ehsize.val = sizeof(ElfEhdr);
+    *(u16 *)&(hdr->e_ehsize) = sizeof(ElfEhdr);
 
     if (ctx->shstrtab) {
         if (ctx->shstrtab->chunk->shndx < SHN_LORESERVE) {
             *(u16 *)(&(hdr->e_shstrndx)) = ctx->shstrtab->chunk->shndx;
         } else {
-            hdr->e_shstrndx.val[0] = (SHN_XINDEX >> 8) & 0xFF;
-            hdr->e_shstrndx.val[1] = SHN_XINDEX & 0xFF;
+            *(u16 *)&(hdr->e_shstrndx) = SHN_XINDEX;
         }
             
     }
 
      if (ctx->arg.relocatable)
-        *hdr->e_type.val = ET_REL;
+        *(u16 *)&(hdr->e_type) = ET_REL;
     else if (ctx->arg.pic)
         *hdr->e_type.val = ET_DYN;
     else
-        *hdr->e_type.val = ET_EXEC;
+        *(u16 *)&(hdr->e_type) = ET_EXEC;
 
     if (ctx->phdr) {
-        *hdr->e_phoff.val = *ctx->phdr->chunk->shdr.sh_offset.val;
-        *hdr->e_phentsize.val = sizeof(ElfPhdr);
-        *hdr->e_phnum.val = *((u32 *)&(ctx->phdr->chunk->shdr.sh_size)) / sizeof(ElfPhdr);
+        *(u32 *)&(hdr->e_phoff) = *(u32 *)&(ctx->phdr->chunk->shdr.sh_offset);
+        *(u16 *)&(hdr->e_phentsize) = sizeof(ElfPhdr);
+        *(u16 *)&(hdr->e_phnum) = *((u16 *)&(ctx->phdr->chunk->shdr.sh_size)) / sizeof(ElfPhdr);
     }
+    error(ctx);
     if (ctx->shdr) {
-        *hdr->e_shoff.val = *((u32 *)&(ctx->shdr->chunk->shdr.sh_offset));
-        *hdr->e_shentsize.val = sizeof(ElfShdr);
+        *(u32 *)&(hdr->e_shoff) = *((u32 *)&(ctx->shdr->chunk->shdr.sh_offset));
+        *(u16 *)&(hdr->e_shentsize) = sizeof(ElfShdr);
 
         // Since e_shnum is a 16-bit integer field, we can't store a very
         // large value there. If it is >65535, the real value is stored to
         // the zero'th section's sh_size field.
-        i64 shnum = *ctx->shdr->chunk->shdr.sh_size.val / sizeof(ElfShdr);
-        *hdr->e_shnum.val = (shnum <= UINT16_MAX) ? shnum : 0;
+        
+        i64 shnum = *(u32 *)&(ctx->shdr->chunk->shdr.sh_size) / sizeof(ElfShdr);
+       
+        *(u16 *)&(hdr->e_shnum) = (shnum <= UINT16_MAX) ? shnum : 0;
+         error(ctx);
     }
+    error(ctx);
 }
 
 void shdr_copy_buf(Context *ctx,Chunk *chunk) {
@@ -641,7 +656,7 @@ void shdr_copy_buf(Context *ctx,Chunk *chunk) {
 }
 
 void phdr_copy_buf(Context *ctx,Chunk *chunk) {
-  write_vector(ctx->buf + *(u32 *)&(chunk->shdr.sh_offset), ctx->phdr->phdrs);
+    write_vector(ctx,ctx->buf + *(u32 *)&(chunk->shdr.sh_offset), ctx->phdr->phdrs);
 }
 
 void strtab_copy_buf(Context *ctx,Chunk *chunk) {
@@ -658,11 +673,20 @@ void shstrtab_copy_buf(Context *ctx,Chunk *chunk) {
 
     for (int i = 0;i < ctx->chunks.size;i++) {
         Chunk *chunk = ctx->chunks.data[i];
-        if (kind(chunk) != HEADER && !chunk->name)
+        if (kind(chunk) != HEADER && chunk->name != NULL)
             write_string(base + *(u32 *)&(chunk->shdr.sh_name), chunk->name);
     }       
 }
 
+void out_sec_populate_symtab (Context *ctx,Chunk *chunk) {
+    if (chunk->num_local_symtab == 0)
+        return;
+}
+
+void populate_symtab(Context *ctx,Chunk *chunk) {
+    if(chunk->is_outsec)
+        out_sec_populate_symtab(ctx,chunk);
+}
 // If we create range extension thunks, we also synthesize symbols to mark
 // the locations of thunks. Creating such symbols is optional, but it helps
 // disassembling and/or debugging our output.
@@ -679,18 +703,26 @@ void symtab_copy_buf(Context *ctx,Chunk *chunk) {
     for(int i = 0;i < ctx->chunks.size;i++) {
         Chunk *chunk = ctx->chunks.data[i];
         if(chunk->shndx) {
-            ElfSym sym = buf[chunk->shndx];
-            memset(&sym, 0, sizeof(sym));
+            ElfSym *sym = &buf[chunk->shndx];
+            memset(sym, 0, sizeof(ElfSym));
 
-            sym.st_type = STT_SECTION;
-            *(u32 *)&(sym.st_value) = *(u32 *)&(chunk->shdr.sh_addr);
-            *(u16 *)&(sym.st_shndx) = chunk->shndx;
+            sym->st_type = STT_SECTION;
+            *(u32 *)&(sym->st_value) = *(u32 *)&(chunk->shdr.sh_addr);
+            *(u16 *)&(sym->st_shndx) = chunk->shndx;
         }
     }
 
     // Populate linker-synthesized symbols
-
+    for(int i = 0; i < ctx->chunks.size;i++) {
+        Chunk *chunk = ctx->chunks.data[i];
+        populate_symtab(ctx,chunk);
+    }
     // Copy symbols from input files
+    for(int i = 0;i < ctx->objs.size;i++) {
+        ObjectFile *file = ctx->objs.data[i];
+        obj_populate_symtab(ctx,file);
+    }
+
 }
 
 i64 get_st_shndx(ELFSymbol *sym){
@@ -711,22 +743,22 @@ i64 get_st_shndx(ELFSymbol *sym){
 };
 
 ElfSym to_output_esym(Context *ctx,ELFSymbol *sym, u32 st_name,
-                         U32 *shn_xindex,ObjectFile *file,int i) {
+                         U32 *shn_xindex,ObjectFile *file) {
     ElfSym esym1;
     memset(&esym1, 0, sizeof(esym1));
 
     *(u32 *)&(esym1.st_name) = st_name;
-    esym1.st_type = elfsym_get_type(file,i);
-    esym1.st_size = esym(&(file->inputfile),i)->st_size;
+    esym1.st_type = elfsym_get_type(file,sym->sym_idx);
+    esym1.st_size = esym(&(file->inputfile),sym->sym_idx)->st_size;
 
-    if (is_local(ctx,sym,file,i))
+    if (is_local(ctx,sym,file,sym->sym_idx))
         esym1.st_bind = STB_LOCAL;
     else if (sym->is_weak)
         esym1.st_bind = STB_WEAK;
     else if (sym->file->inputfile.is_dso)
         esym1.st_bind = STB_GLOBAL;
     else
-        esym1.st_bind = esym(&(file->inputfile),i)->st_bind;
+        esym1.st_bind = esym(&(file->inputfile),sym->sym_idx)->st_bind;
 
     i64 shndx = -1;
     Chunk *osec = get_output_section(sym);
@@ -737,25 +769,24 @@ ElfSym to_output_esym(Context *ctx,ELFSymbol *sym, u32 st_name,
     //     *(u32 *)&(esym1.st_value) = get_plt_addr(ctx);
     // } else 
     if (osec) {
-        // Linker-synthesized symbols
+        // Linker-synthesized symbols _ehdr_start
         shndx = osec->shndx;
-        // *(u32 *)&(esym1.st_value) = elfsym_get_addr(ctx);
+        *(u32 *)&(esym1.st_value) = elfsym_get_addr(ctx,0,sym);
     } else if (frag) {
         // Section fragment 
         shndx = frag->output_section->chunk->shndx;
         // *(u32 *)&(esym1.st_value) = elfsym_get_addr(ctx);
     } 
-    // else if (!get_input_section()) {
-    //     // Absolute symbol
-    //     *(u16 *)&(esym1.st_shndx) = SHN_ABS;
-    //     *(u32 *)&(esym1.st_value) = get_addr(ctx);
-    // } 
-    else {
+    else if (!elfsym_get_input_section(sym)) {
+        // Absolute symbol  main.C
+        *(u16 *)&(esym1.st_shndx) = SHN_ABS;
+        *(u32 *)&(esym1.st_value) = elfsym_get_addr(ctx,0,sym);
+    } else { 
+        // $a main
         shndx = get_st_shndx(sym);
         esym1.st_visibility = sym->visibility;
         *(u32 *)&(esym1.st_value) = elfsym_get_addr(ctx, NO_PLT,sym);
     }
-
     // Symbol's st_shndx is only 16 bits wide, so we can't store a large
     // section index there. If the total number of sections is equal to
     // or greater than SHN_LORESERVE (= 65280), the real index is stored

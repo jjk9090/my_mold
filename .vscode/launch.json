@@ -32,7 +32,8 @@
             "args": [
               "-o",
               "main",
-              "main.o"
+              "a.o",
+              "b.o"
             ],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}/test_demo/demo",
@@ -46,6 +47,24 @@
                 "ignoreFailures": true
               }
             ]
-          },
+        },
+        {
+            "name": "test2",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/test_demo/test/test6/test",
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}/test_demo/test/test6",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "setupCommands": [
+              {
+                "description": "为 gdb 启用整齐打印",
+                "text": "-enable-pretty-printing",
+                "ignoreFailures": true
+              }
+            ]
+        },
     ]
 }

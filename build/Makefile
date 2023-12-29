@@ -123,32 +123,32 @@ mymold/fast:
 	$(MAKE) -f CMakeFiles/mymold.dir/build.make CMakeFiles/mymold.dir/build
 .PHONY : mymold/fast
 
-arch-arm32.o: arch-arm32.c.o
+arch_arm32.o: arch_arm32.c.o
 
-.PHONY : arch-arm32.o
+.PHONY : arch_arm32.o
 
 # target to build an object file
-arch-arm32.c.o:
-	$(MAKE) -f CMakeFiles/mymold.dir/build.make CMakeFiles/mymold.dir/arch-arm32.c.o
-.PHONY : arch-arm32.c.o
+arch_arm32.c.o:
+	$(MAKE) -f CMakeFiles/mymold.dir/build.make CMakeFiles/mymold.dir/arch_arm32.c.o
+.PHONY : arch_arm32.c.o
 
-arch-arm32.i: arch-arm32.c.i
+arch_arm32.i: arch_arm32.c.i
 
-.PHONY : arch-arm32.i
+.PHONY : arch_arm32.i
 
 # target to preprocess a source file
-arch-arm32.c.i:
-	$(MAKE) -f CMakeFiles/mymold.dir/build.make CMakeFiles/mymold.dir/arch-arm32.c.i
-.PHONY : arch-arm32.c.i
+arch_arm32.c.i:
+	$(MAKE) -f CMakeFiles/mymold.dir/build.make CMakeFiles/mymold.dir/arch_arm32.c.i
+.PHONY : arch_arm32.c.i
 
-arch-arm32.s: arch-arm32.c.s
+arch_arm32.s: arch_arm32.c.s
 
-.PHONY : arch-arm32.s
+.PHONY : arch_arm32.s
 
 # target to generate assembly for a file
-arch-arm32.c.s:
-	$(MAKE) -f CMakeFiles/mymold.dir/build.make CMakeFiles/mymold.dir/arch-arm32.c.s
-.PHONY : arch-arm32.c.s
+arch_arm32.c.s:
+	$(MAKE) -f CMakeFiles/mymold.dir/build.make CMakeFiles/mymold.dir/arch_arm32.c.s
+.PHONY : arch_arm32.c.s
 
 input_file.o: input_file.c.o
 
@@ -348,9 +348,9 @@ help:
 	@echo "... rebuild_cache"
 	@echo "... edit_cache"
 	@echo "... mymold"
-	@echo "... arch-arm32.o"
-	@echo "... arch-arm32.i"
-	@echo "... arch-arm32.s"
+	@echo "... arch_arm32.o"
+	@echo "... arch_arm32.i"
+	@echo "... arch_arm32.s"
 	@echo "... input_file.o"
 	@echo "... input_file.i"
 	@echo "... input_file.s"

@@ -194,6 +194,11 @@ typedef struct {
     Chunk *chunk;
 } DynamicSection;
 
+typedef struct {
+    /* data */
+    Chunk *chunk;
+} InterpSection;
+
 
 
 

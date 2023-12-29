@@ -60,6 +60,6 @@ typedef struct {
 typedef struct {
     OutputSectionKey *key;  
     void *value;  // 值是 void* 类型
-    UT_hash_handle out;
+    UT_hash_handle hh;
 } OutputSection_element;
 #endif

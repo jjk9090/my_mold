@@ -112,7 +112,6 @@ void read_file(Context *ctx,MappedFile *mf) {
     switch (get_file_type(ctx, mf)) {
         case ELF_OBJ:
             // new_object_file(ctx, mf, "");
-            VectorNew(&(ctx->objs), 1);
             VectorAdd(&(ctx->objs),new_object_file(ctx, mf, ""),sizeof(ObjectFile *));
             return;
     }
@@ -120,12 +119,16 @@ void read_file(Context *ctx,MappedFile *mf) {
 
 static void read_input_files (Context *ctx,char **args) {
     ctx->is_static = ctx->arg.is_static;
+    VectorNew(&(ctx->mf_pool),1);
+    VectorNew(&(ctx->objs), 1);
     while (*args != NULL)  {
         char *arg = args[0];
         if (!strcmp(arg,"--as-needed")) {
 
         } else {
-            read_file(ctx, mapped_file_must_open(ctx, arg));
+            MappedFile *mf = mapped_file_must_open(ctx, arg);
+            VectorAdd(&(ctx->mf_pool),mf,sizeof(MappedFile *));
+            read_file(ctx, mf);
         }
         args = args + 1;
     }
@@ -145,6 +148,51 @@ void init_context(Context *ctx) {
     VectorNew(&(ctx->osec_pool),1);
     VectorNew(&(ctx->string_pool),1);
 }
+void init_ctx(Context *ctx) {
+    ctx->arg.entry = get_symbol(ctx,"_start");
+    ctx->arg.fini = get_symbol(ctx,"_fini");
+    ctx->arg.init = get_symbol(ctx,"_init");
+    ctx->arg.is_static = false;
+    ctx->in_lib = false;
+    
+    ctx->file_priority = 10000;
+    ctx->default_version = VER_NDX_UNSPECIFIED;
+    ctx->dtp_addr = 0;
+    ctx->overwrite_output_file = true;
+
+    ctx->arg.relocatable = false;
+    ctx->arg.oformat_binary = false;
+    ctx->arg.relocatable_merge_sections = false;
+    ctx->arg.gc_sections = false;
+    ctx->arg.z_sectionheader = true;
+    ctx->arg.z_now = false;
+    ctx->arg.eh_frame_hdr = true;
+    ctx->arg.z_separate_code =  NOSEPARATE_CODE;
+    ctx->arg.start_stop = false;
+    ctx->arg.hash_style_sysv = true;
+    ctx->arg.hash_style_gnu = true;
+    ctx->arg.z_relro = true;
+    ctx->arg.discard_all = false;
+    ctx->arg.strip_all = false;
+    ctx->arg.discard_locals = false;
+    ctx->arg.omagic = false;
+    ctx->arg.rosegment = true;
+    ctx->arg.z_stack_size = 0;
+    // u64 image_base = 0x200000;
+    ctx->arg.image_base = 0x200000;
+    ctx->merged_sections_count = 0;
+    ctx->arg.execute_only = false;
+    ctx->arg.nmagic = false;
+    ctx->arg.filler = -1;
+    ctx->arg.pic = false;
+    ctx->arg.quick_exit = true;
+    ctx->arg.dynamic_linker = NULL;
+    ctx->arg.hash_style_sysv = true;
+    VectorNew(&(ctx->arg.retain_symbols_file),1);
+    ctx->gloval_merge_sec = (MergedSection *)malloc(sizeof(MergedSection));
+    ctx->gloval_merge_sec->map = NULL;
+    VectorNew(&merge_string,1);
+}
 int main(int argc, char **argv) {
     mold_version = get_mold_version();
     // 创建保存上下文信息的结构体
@@ -153,48 +201,12 @@ int main(int argc, char **argv) {
     insert_symbol(&ctx,"_start", "_start");
     insert_symbol(&ctx,"_fini","_fini");
     insert_symbol(&ctx,"_init","_init");
-
-    ctx.arg.entry = get_symbol(&ctx,"_start");
-    ctx.arg.fini = get_symbol(&ctx,"_fini");
-    ctx.arg.init = get_symbol(&ctx,"_init");
-    ctx.arg.is_static = false;
-    ctx.in_lib = false;
+    VectorNew(&((&ctx)->merged_sections),1);
     // 解析拓展命令行参数
     ctx.cmdline_args = expand_response_files(&ctx,argv);
-    ctx.file_priority = 10000;
-    ctx.default_version = VER_NDX_UNSPECIFIED;
-    ctx.dtp_addr = 0;
-    ctx.overwrite_output_file = true;
-
-    ctx.arg.relocatable = false;
-    ctx.arg.oformat_binary = false;
-    ctx.arg.relocatable_merge_sections = false;
-    ctx.arg.gc_sections = false;
-    ctx.arg.z_sectionheader = true;
-    ctx.arg.z_now = false;
-    ctx.arg.eh_frame_hdr = true;
-    ctx.arg.z_separate_code =  NOSEPARATE_CODE;
-    ctx.arg.start_stop = false;
-    ctx.arg.hash_style_sysv = true;
-    ctx.arg.hash_style_gnu = true;
-    ctx.arg.z_relro = true;
-    ctx.arg.discard_all = false;
-    ctx.arg.strip_all = false;
-    ctx.arg.discard_locals = false;
-    ctx.arg.omagic = false;
-    ctx.arg.rosegment = true;
-    ctx.arg.z_stack_size = 0;
-    // u64 image_base = 0x200000;
-    ctx.arg.image_base = 0x200000;
-    ctx.merged_sections_count = 0;
-    ctx.arg.execute_only = false;
-    ctx.arg.nmagic = false;
-    ctx.arg.filler = -1;
-    ctx.arg.pic = false;
-    ctx.arg.quick_exit = true;
-    VectorNew(&((&ctx)->arg.retain_symbols_file),1);
-
-    VectorNew(&merge_string,1);
+    
+    init_ctx(&ctx);
+    
     init_context(&ctx);
     
     // VectorNew(&(&ctx)->string_pool,1);
@@ -223,6 +235,9 @@ int main(int argc, char **argv) {
     // merge sections
     resolve_section_pieces(&ctx);
 
+    // Create .bss sections for common symbols.
+    convert_common_symbols(&ctx);
+
     // 创造.comment 段
     compute_merged_section_sizes(&ctx);
 
@@ -249,7 +264,7 @@ int main(int argc, char **argv) {
 
     sort_output_sections(&ctx);
     // ctx.dynsym->finalize(ctx);  暂时没有
-
+    
     // Fill .gnu.version_r section contents.
     // 对verneed段进行构造，实际写入内容。其中包含了字符串信息，因此还会将字符串写入dynstr中
     verneed_construct(&ctx);
@@ -259,13 +274,21 @@ int main(int argc, char **argv) {
 
     // 构造output .eh_frame
     eh_frame_construct(&ctx);
-
+    for(int i = 0;i < (&ctx)->chunks.size;i++) {
+        Chunk *chunk = (Chunk *)((&ctx)->chunks.data[i]);
+        if(!strcmp(chunk->name,".text"))
+            printf("%s\n",chunk->name);
+    }
     // Compute the section header values for all sections.
     compute_section_headers(&ctx);
 
     // Assign offsets to output sections
     i64 filesize = set_osec_offsets(&ctx);
-
+    for(int i = 0;i < (&ctx)->chunks.size;i++) {
+        Chunk *chunk = (Chunk *)((&ctx)->chunks.data[i]);
+        if(!strcmp(chunk->name,".text"))
+            printf("%s\n",chunk->name);
+    }
     // Set actual addresses to linker-synthesized symbols.
     fix_synthetic_symbols(&ctx);
 
@@ -279,6 +302,7 @@ int main(int argc, char **argv) {
     // Copy input sections to the output file and apply relocations.
     copy_chunks(&ctx);
 
+    // 关闭文件
     out_file_close(&ctx,(&ctx)->output_file);
 
     if (ctx.arg.quick_exit)

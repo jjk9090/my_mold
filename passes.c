@@ -130,7 +130,7 @@ void mark_live_objects(Context *ctx) {
 }
 
 void do_resolve_symbols(Context *ctx) {
-    for(int i = 0;;i++) {
+    for(int i = 0;i < ctx->objs.size;i++) {
         ObjectFile *file = (ObjectFile *)ctx->objs.data[i];
         if (file == NULL)
             break;
@@ -188,6 +188,7 @@ MergedSection *add_comment_string(Context *ctx, char *str) {
     // sec->insert(ctx, data, hash_string(data), 0);
     u64 hash = hash_string(buf);
     insert(sec,ctx,buf,hash,0);
+    // ctx->gloval_merge_sec  = sec;
     return sec;
 }
 
@@ -196,7 +197,10 @@ void compute_merged_section_sizes(Context *ctx) {
     if (!ctx->arg.oformat_binary) {
         sec = add_comment_string(ctx, mold_version);
     }
-    assign_offsets(ctx,sec);
+    for(int i = 0;i < ctx->merged_sections.size;i++) {
+        MergedSection *sec = ctx->merged_sections.data[i];
+        assign_offsets(ctx,sec);
+    }
 }
 
 bool sec_order_find (Context *ctx,char *name) {
@@ -214,9 +218,9 @@ OutputEhdr *create_section_order_e(u32 sh_flags) {
     OutputEhdr *out_endr = (OutputEhdr *)malloc(sizeof(OutputEhdr));
     out_endr->chunk = (Chunk *)malloc(sizeof(Chunk));
     out_endr->chunk->name = strdup("EHDR");
-    *out_endr->chunk->shdr.sh_flags.val = sh_flags;
-    *out_endr->chunk->shdr.sh_size.val = sizeof(ElfEhdr);
-    *out_endr->chunk->shdr.sh_addralign.val = sizeof(Word);
+    *(u32 *)&(out_endr->chunk->shdr.sh_flags) = sh_flags;
+    *(u32 *)&(out_endr->chunk->shdr.sh_size) = sizeof(ElfEhdr);
+    *(u32 *)&(out_endr->chunk->shdr.sh_addralign) = sizeof(Word);
     return out_endr;
 }
 
@@ -225,8 +229,8 @@ OutputPhdr *create_section_order_p(u32 sh_flags) {
     out_endr->chunk = (Chunk *)malloc(sizeof(Chunk));
     out_endr->chunk->name = strdup("PHDR");
     // *out_endr->chunk->shdr.sh_size.val = 1;
-    *out_endr->chunk->shdr.sh_flags.val = sh_flags;
-    *out_endr->chunk->shdr.sh_addralign.val = sizeof(Word);
+    *(u32 *)&(out_endr->chunk->shdr.sh_flags) = sh_flags;
+    *(u32 *)&(out_endr->chunk->shdr.sh_addralign) = sizeof(Word);
     return out_endr;
 }
 
@@ -235,8 +239,8 @@ OutputShdr *create_section_order_s(u32 sh_flags) {
     out_endr->chunk = (Chunk *)malloc(sizeof(Chunk));
     out_endr->chunk->name = strdup("SHDR");
     // *out_endr->chunk->shdr.sh_flags.val = sh_flags;
-    *out_endr->chunk->shdr.sh_size.val = 1;
-    *out_endr->chunk->shdr.sh_addralign.val = sizeof(Word);
+    *(u32 *)&(out_endr->chunk->shdr.sh_size) = 1;
+    *(u32 *)&(out_endr->chunk->shdr.sh_addralign) = sizeof(Word);
     return out_endr;
 }
 
@@ -245,10 +249,10 @@ GotSection *create_got(u32 sh_flags) {
     got->chunk = (Chunk *)malloc(sizeof(Chunk));
     got->chunk->name = strdup(".got");
     got->chunk->is_relro = true;
-    *got->chunk->shdr.sh_type.val = SHT_PROGBITS;
-    *got->chunk->shdr.sh_flags.val = SHF_ALLOC | SHF_WRITE;
-    *got->chunk->shdr.sh_addralign.val  = sizeof(Word);
-    *got->chunk->shdr.sh_size.val  = sizeof(Word);
+    *(u32 *)&(got->chunk->shdr.sh_type) = SHT_PROGBITS;
+    *(u32 *)&(got->chunk->shdr.sh_flags) = SHF_ALLOC | SHF_WRITE;
+    *(u32 *)&(got->chunk->shdr.sh_addralign)  = sizeof(Word);
+    *(u32 *)&(got->chunk->shdr.sh_size)  = sizeof(Word);
     return got;
 }
 
@@ -257,12 +261,12 @@ GotPltSection *create_got_plt(Context *ctx) {
     got_plt->chunk = (Chunk *)malloc(sizeof(Chunk));
     got_plt->chunk->name = strdup(".got.plt");
     got_plt->chunk->is_relro = ctx->arg.z_now;
-    *got_plt->chunk->shdr.sh_type.val = SHT_PROGBITS;
-    *got_plt->chunk->shdr.sh_flags.val = SHF_ALLOC | SHF_WRITE;
-    *got_plt->chunk->shdr.sh_addralign.val = sizeof(Word);
+    *(u32 *)&(got_plt->chunk->shdr.sh_type) = SHT_PROGBITS;
+    *(u32 *)&(got_plt->chunk->shdr.sh_flags) = SHF_ALLOC | SHF_WRITE;
+    *(u32 *)&(got_plt->chunk->shdr.sh_addralign) = sizeof(Word);
     got_plt->HDR_SIZE = 3 * sizeof(Word);
     got_plt->ENTRY_SIZE = sizeof(Word);
-    *got_plt->chunk->shdr.sh_size.val = got_plt->HDR_SIZE;
+    *(u32 *)&(got_plt->chunk->shdr.sh_size) = got_plt->HDR_SIZE;
     return got_plt;
 }
 
@@ -270,9 +274,10 @@ RelDynSection *create_reldyn() {
     RelDynSection *reldyn = (RelDynSection *)malloc(sizeof(RelDynSection));
     reldyn->chunk = (Chunk *)malloc(sizeof(Chunk));
     reldyn->chunk->name = target.is_rela ? strdup(".rela.dyn") : strdup(".rel.dyn");
-    *reldyn->chunk->shdr.sh_type.val = target.is_rela ? SHT_RELA : SHT_REL;
-    *reldyn->chunk->shdr.sh_flags.val = SHF_ALLOC;
-    *reldyn->chunk->shdr.sh_entsize.val = sizeof(ElfRel);
+    *(u32 *)&(reldyn->chunk->shdr.sh_type) = target.is_rela ? SHT_RELA : SHT_REL;
+    *(u32 *)&(reldyn->chunk->shdr.sh_flags) = SHF_ALLOC;
+    *(u32 *)&(reldyn->chunk->shdr.sh_entsize) = sizeof(ElfRel);
+    *(u32 *)&(reldyn->chunk->shdr.sh_addralign) = 1;
     return reldyn;
 }
 
@@ -280,10 +285,10 @@ RelPltSection *create_relplt() {
     RelPltSection *relplt = (RelPltSection *)malloc(sizeof(RelPltSection));
     relplt->chunk = (Chunk *)malloc(sizeof(Chunk));
     relplt->chunk->name = target.is_rela ? strdup(".rela.plt") : strdup(".rel.plt");
-    *relplt->chunk->shdr.sh_type.val = target.is_rela ? SHT_RELA : SHT_REL;
-    *relplt->chunk->shdr.sh_flags.val = SHF_ALLOC;
-    *relplt->chunk->shdr.sh_entsize.val =sizeof(ElfRel);
-    *relplt->chunk->shdr.sh_addralign.val = sizeof(Word);
+    *(u32 *)&(relplt->chunk->shdr.sh_type) = target.is_rela ? SHT_RELA : SHT_REL;
+    *(u32 *)&(relplt->chunk->shdr.sh_flags) = SHF_ALLOC;
+    *(u32 *)&(relplt->chunk->shdr.sh_entsize) = sizeof(ElfRel);
+    *(u32 *)&(relplt->chunk->shdr.sh_addralign) = sizeof(Word);
     return relplt;
 }
 
@@ -291,7 +296,8 @@ StrtabSection *create_strtab() {
     StrtabSection *strtab = (StrtabSection *)malloc(sizeof(StrtabSection));
     strtab->chunk = (Chunk *)malloc(sizeof(Chunk));
     strtab->chunk->name = strdup(".strtab");
-    *strtab->chunk->shdr.sh_type.val = SHT_STRTAB;
+    *(u32 *)&(strtab->chunk->shdr.sh_type) = SHT_STRTAB;
+    *(u32 *)&(strtab->chunk->shdr.sh_addralign) = 1;
     strtab->ARM = 1;
     strtab->THUMB = 4;
     strtab->DATA = 7;
@@ -302,9 +308,9 @@ PltSection *create_plt() {
     PltSection *plt = (PltSection *)malloc(sizeof(PltSection));
     plt->chunk = (Chunk *)malloc(sizeof(Chunk));
     plt->chunk->name = strdup(".plt");
-    *plt->chunk->shdr.sh_type.val = SHT_PROGBITS;
-    *plt->chunk->shdr.sh_flags.val = SHF_ALLOC | SHF_EXECINSTR;
-    *plt->chunk->shdr.sh_addralign.val = 16;
+    *(u32 *)&(plt->chunk->shdr.sh_type) = SHT_PROGBITS;
+    *(u32 *)&(plt->chunk->shdr.sh_flags) = SHF_ALLOC | SHF_EXECINSTR;
+    *(u32 *)&(plt->chunk->shdr.sh_addralign) = 16;
     return plt;
 }
 
@@ -312,9 +318,9 @@ PltGotSection *create_plt_got() {
     PltGotSection *plt_got = (PltGotSection *)malloc(sizeof(PltGotSection));
     plt_got->chunk = (Chunk *)malloc(sizeof(Chunk));
     plt_got->chunk->name = strdup(".plt.got");
-    *plt_got->chunk->shdr.sh_type.val = SHT_PROGBITS;
-    *plt_got->chunk->shdr.sh_flags.val = SHF_ALLOC | SHF_EXECINSTR;
-    *plt_got->chunk->shdr.sh_addralign.val = 16;
+    *(u32 *)&(plt_got->chunk->shdr.sh_type) = SHT_PROGBITS;
+    *(u32 *)&(plt_got->chunk->shdr.sh_flags) = SHF_ALLOC | SHF_EXECINSTR;
+    *(u32 *)&(plt_got->chunk->shdr.sh_addralign) = 16;
     return plt_got;
 }
 
@@ -322,9 +328,9 @@ SymtabSection *create_symtab() {
     SymtabSection *symtab = (SymtabSection *)malloc(sizeof(SymtabSection));
     symtab->chunk = (Chunk *)malloc(sizeof(Chunk));
     symtab->chunk->name = strdup(".symtab");
-    *symtab->chunk->shdr.sh_type.val = SHT_SYMTAB;
-    *symtab->chunk->shdr.sh_entsize.val = sizeof(ElfSym);
-    *symtab->chunk->shdr.sh_addralign.val = sizeof(Word);
+    *(u32 *)&(symtab->chunk->shdr.sh_type) = SHT_SYMTAB;
+    *(u32 *)&(symtab->chunk->shdr.sh_entsize) = sizeof(ElfSym);
+    *(u32 *)&(symtab->chunk->shdr.sh_addralign) = sizeof(Word);
     return symtab;
 }
 
@@ -333,9 +339,10 @@ DynsymSection *create_dynsym() {
     dynsym->finalized = false;
     dynsym->chunk = (Chunk *)malloc(sizeof(Chunk));
     dynsym->chunk->name =  strdup(".dynsym");
-    *dynsym->chunk->shdr.sh_type.val = SHT_DYNSYM;
-    *dynsym->chunk->shdr.sh_entsize.val = sizeof(ElfSym);
-    *dynsym->chunk->shdr.sh_addralign.val = sizeof(Word);
+    *(u32 *)&(dynsym->chunk->shdr.sh_type) = SHT_DYNSYM;
+    *(u32 *)&(dynsym->chunk->shdr.sh_entsize) = sizeof(ElfSym);
+    *(u32 *)&(dynsym->chunk->shdr.sh_addralign) = sizeof(Word);
+    VectorNew(&(dynsym->symbols),1);
     return dynsym;
 }
 
@@ -343,9 +350,9 @@ EhFrameSection *create_enframe() {
     EhFrameSection *ehframe = (EhFrameSection *)malloc(sizeof(EhFrameSection));
     ehframe->chunk = (Chunk *)malloc(sizeof(Chunk));
     ehframe->chunk->name =  strdup(".eh_frame");
-    *ehframe->chunk->shdr.sh_type.val = SHT_PROGBITS;
-    *ehframe->chunk->shdr.sh_flags.val = SHF_ALLOC;
-    *ehframe->chunk->shdr.sh_addralign.val = sizeof(Word);
+    *(u32 *)&(ehframe->chunk->shdr.sh_type) = SHT_PROGBITS;
+    *(u32 *)&(ehframe->chunk->shdr.sh_flags) = SHF_ALLOC;
+    *(u32 *)&(ehframe->chunk->shdr.sh_addralign) = sizeof(Word);
     return ehframe;
 }
 
@@ -353,7 +360,8 @@ ShstrtabSection *create_shstrtab() {
     ShstrtabSection *shstrtab = (ShstrtabSection *)malloc(sizeof(ShstrtabSection));
     shstrtab->chunk = (Chunk *)malloc(sizeof(Chunk));
     shstrtab->chunk->name =  strdup(".shstrtab");
-    *shstrtab->chunk->shdr.sh_type.val = SHT_STRTAB;
+    *(u32 *)&(shstrtab->chunk->shdr.sh_type) = SHT_STRTAB;
+    *(u32 *)&(shstrtab->chunk->shdr.sh_addralign) = 1;
     return shstrtab;
 }
 
@@ -362,12 +370,12 @@ EhFrameHdrSection *create_ehframehdr() {
     EhFrameHdrSection *ehframehdr = (EhFrameHdrSection *)malloc(sizeof(EhFrameHdrSection));
     ehframehdr->chunk = (Chunk *)malloc(sizeof(Chunk));
     ehframehdr->chunk->name =  strdup(".eh_frame_hdr");
-    *ehframehdr->chunk->shdr.sh_type.val = SHT_PROGBITS; 
-    *ehframehdr->chunk->shdr.sh_flags.val = SHF_ALLOC;
-    *ehframehdr->chunk->shdr.sh_addralign.val = 4;
+    *(u32 *)&(ehframehdr->chunk->shdr.sh_type) = SHT_PROGBITS; 
+    *(u32 *)&(ehframehdr->chunk->shdr.sh_flags) = SHF_ALLOC;
+    *(u32 *)&(ehframehdr->chunk->shdr.sh_addralign) = 4;
     ehframehdr->HEADER_SIZE = 12;
     ehframehdr->num_fdes = 0;
-    *ehframehdr->chunk->shdr.sh_size.val = ehframehdr->HEADER_SIZE;
+    *(u32 *)&(ehframehdr->chunk->shdr.sh_size) = ehframehdr->HEADER_SIZE;
     return ehframehdr;
 }
 
@@ -375,10 +383,10 @@ HashSection *create_hash() {
     HashSection *hash = (HashSection *)malloc(sizeof(HashSection));
     hash->chunk = (Chunk *)malloc(sizeof(Chunk));
     hash->chunk->name = strdup(".hash");
-    *hash->chunk->shdr.sh_type.val = SHT_HASH;
-    *hash->chunk->shdr.sh_flags.val = SHF_ALLOC;
-    *hash->chunk->shdr.sh_entsize.val = 4;
-    *hash->chunk->shdr.sh_addralign.val = 4;
+    *(u32 *)&(hash->chunk->shdr.sh_type) = SHT_HASH;
+    *(u32 *)&(hash->chunk->shdr.sh_flags) = SHF_ALLOC;
+    *(u32 *)&(hash->chunk->shdr.sh_entsize) = 4;
+    *(u32 *)&(hash->chunk->shdr.sh_addralign) = 4;
     return hash;
 }
 
@@ -387,12 +395,9 @@ GnuHashSection *create_gnu_hash() {
     gnu_hash->chunk = (Chunk *)malloc(sizeof(Chunk));
     gnu_hash->chunk->name = strdup(".gnu.hash");
     // *gnu_hash->chunk->shdr.sh_type.val = SHT_GNU_HASH;
-    gnu_hash->chunk->shdr.sh_type.val[0] = (SHT_GNU_HASH >> 24) & 0xFF;
-    gnu_hash->chunk->shdr.sh_type.val[1] = (SHT_GNU_HASH >> 16) & 0xFF;
-    gnu_hash->chunk->shdr.sh_type.val[2] = (SHT_GNU_HASH >> 8) & 0xFF;
-    gnu_hash->chunk->shdr.sh_type.val[3] = SHT_GNU_HASH & 0xFF;
-    *gnu_hash->chunk->shdr.sh_flags.val = SHF_ALLOC;
-    *gnu_hash->chunk->shdr.sh_addralign.val = sizeof(Word);
+    *(u32 *)&(gnu_hash->chunk->shdr.sh_type) = SHT_GNU_HASH;
+    *(u32 *)&(gnu_hash->chunk->shdr.sh_flags) = SHF_ALLOC;
+    *(u32 *)&(gnu_hash->chunk->shdr.sh_addralign) = sizeof(Word);
     gnu_hash->BLOOM_SHIFT = 26;
     gnu_hash->HEADER_SIZE = 16;
     gnu_hash->LOAD_FACTOR = 8;
@@ -405,8 +410,9 @@ DynstrSection *create_dynstr() {
     DynstrSection *dynstr = (DynstrSection *)malloc(sizeof(DynstrSection));
     dynstr->chunk = (Chunk *)malloc(sizeof(Chunk));
     dynstr->chunk->name = strdup(".dynstr");
-    *dynstr->chunk->shdr.sh_type.val = SHT_STRTAB;
-    *dynstr->chunk->shdr.sh_flags.val = SHF_ALLOC;
+    *(u32 *)&(dynstr->chunk->shdr.sh_type) = SHT_STRTAB;
+    *(u32 *)&(dynstr->chunk->shdr.sh_flags) = SHF_ALLOC;
+    *(u32 *)&(dynstr->chunk->shdr.sh_addralign) = 1;
     dynstr->dynsym_offset = -1;
     return dynstr;
 }
@@ -416,13 +422,10 @@ VersymSection *create_gnu_version() {
     gnu_version->chunk = (Chunk *)malloc(sizeof(Chunk));
     gnu_version->chunk->name = strdup(".gnu.version");
     // *gnu_version->chunk->shdr.sh_type.val = SHT_GNU_VERSYM;
-    gnu_version->chunk->shdr.sh_type.val[0] = (SHT_GNU_VERSYM >> 24) & 0xFF;
-    gnu_version->chunk->shdr.sh_type.val[1] = (SHT_GNU_VERSYM >> 16) & 0xFF;
-    gnu_version->chunk->shdr.sh_type.val[2] = (SHT_GNU_VERSYM >> 8) & 0xFF;
-    gnu_version->chunk->shdr.sh_type.val[3] = SHT_GNU_VERSYM & 0xFF;
-    *gnu_version->chunk->shdr.sh_flags.val = SHF_ALLOC;
-    *gnu_version->chunk->shdr.sh_entsize.val = 2;
-    *gnu_version->chunk->shdr.sh_addralign.val = 2;
+    *(u32 *)&(gnu_version->chunk->shdr.sh_type) = SHT_GNU_VERSYM;
+    *(u32 *)&(gnu_version->chunk->shdr.sh_flags) = SHF_ALLOC;
+    *(u32 *)&(gnu_version->chunk->shdr.sh_entsize) = 2;
+    *(u32 *)&(gnu_version->chunk->shdr.sh_addralign) = 2;
     VectorNew(&(gnu_version->contents),1);
     return gnu_version;
 }
@@ -432,12 +435,9 @@ VerneedSection *create_verneed() {
     verneed->chunk = (Chunk *)malloc(sizeof(Chunk));
     verneed->chunk->name = strdup(".gnu.version_r");
     // *verneed->chunk->shdr.sh_type.val = SHT_GNU_VERNEED;
-    verneed->chunk->shdr.sh_type.val[0] = (SHT_GNU_VERNEED >> 24) & 0xFF;
-    verneed->chunk->shdr.sh_type.val[1] = (SHT_GNU_VERNEED >> 16) & 0xFF;
-    verneed->chunk->shdr.sh_type.val[2] = (SHT_GNU_VERNEED >> 8) & 0xFF;
-    verneed->chunk->shdr.sh_type.val[3] = SHT_GNU_VERNEED & 0xFF;
-    *verneed->chunk->shdr.sh_flags.val = SHF_ALLOC;
-    *verneed->chunk->shdr.sh_addralign.val = sizeof(Word);
+    *(u32 *)&(verneed->chunk->shdr.sh_type.val) = SHT_GNU_VERNEED;
+    *(u32 *)&(verneed->chunk->shdr.sh_flags) = SHF_ALLOC;
+    *(u32 *)&(verneed->chunk->shdr.sh_addralign) = sizeof(Word);
     VectorNew(&(verneed->contents),1);
     return verneed;
 }
@@ -447,11 +447,20 @@ RelroPaddingSection *create_relropadding() {
     relro->chunk = (Chunk *)malloc(sizeof(Chunk));
     relro->chunk->name = strdup(".relro_padding");
     relro->chunk->is_relro = true;
-    *relro->chunk->shdr.sh_type.val = SHT_NOBITS;
-    *relro->chunk->shdr.sh_flags.val = SHF_ALLOC | SHF_WRITE;
-    *relro->chunk->shdr.sh_addralign.val = 1;
-    *relro->chunk->shdr.sh_size.val = 1;
+    *(u32 *)&(relro->chunk->shdr.sh_type) = SHT_NOBITS;
+    *(u32 *)&(relro->chunk->shdr.sh_flags) = SHF_ALLOC | SHF_WRITE;
+    *(u32 *)&(relro->chunk->shdr.sh_addralign) = 1;
+    *(u32 *)&(relro->chunk->shdr.sh_size) = 1;
     return relro;
+}
+
+InterpSection *create_interp() {
+    InterpSection *interp = (InterpSection *)malloc(sizeof(InterpSection));
+    interp->chunk = (Chunk *)malloc(sizeof(Chunk));
+    interp->chunk->name = strdup(".interp");
+    *(u32 *)&(interp->chunk->shdr.sh_type) = SHT_PROGBITS;
+    *(u32 *)&(interp->chunk->shdr.sh_flags) = SHF_ALLOC;
+    return interp;
 }
 void create_synthetic_sections(Context *ctx) {
     if (ctx->arg.section_order.size == 0 || sec_order_find(ctx,"EHDR")) {
@@ -518,6 +527,12 @@ void create_synthetic_sections(Context *ctx) {
         ctx->shstrtab = create_shstrtab();
         VectorAdd(&(ctx->chunks),ctx->shstrtab->chunk,sizeof(Chunk *));
     }
+    ctx->interp = NULL;
+    if(ctx->arg.dynamic_linker != NULL) {
+        ctx->interp = create_interp();
+        VectorAdd(&(ctx->chunks),ctx->interp->chunk,sizeof(Chunk *));
+    }
+
     if (ctx->arg.eh_frame_hdr) {
         ctx->eh_frame_hdr = create_ehframehdr();
         VectorAdd(&(ctx->chunks),ctx->eh_frame_hdr->chunk,sizeof(Chunk *));
@@ -526,6 +541,8 @@ void create_synthetic_sections(Context *ctx) {
         ctx->arg.z_separate_code != SEPARATE_LOADABLE_SEGMENTS) {
 
     }
+
+    ctx->hash = NULL;
     if (ctx->arg.hash_style_sysv) {
         ctx->hash = create_hash();
         VectorAdd(&(ctx->chunks),ctx->hash->chunk,sizeof(Chunk *));
@@ -591,9 +608,13 @@ int compareChunks(const void* a, const void* b) {
 void create_output_sections(Context *ctx) {
     i64 size = ctx->osec_pool.size;
     OutputSection_element *output_section_map = NULL;
+    OutputSectionKey *key1;
+    OutputSectionKey *keys[3] = {NULL,NULL,NULL};
+    int idx;
     // // Instantiate output sections
     for (int i = 0;i < ctx->objs.size;i++) {
         ObjectFile *file = ctx->objs.data[i];
+        idx = 0;
         for (int j = 0;;j++) {
             if (file == NULL || file->sections == NULL) {
                 break;
@@ -612,12 +633,30 @@ void create_output_sections(Context *ctx) {
                 VectorAdd(&(ctx->osec_pool),osec,sizeof(OutputSection *));
                 continue;
             }
+         
             OutputSectionKey *key = get_output_section_key(ctx, isec,file,j);
+            if (keys[idx] == NULL)
+                keys[idx] = key;
+            if(keys[idx] != NULL && !strcmp(keys[idx]->name,key->name))
+                key = keys[idx];
+            idx++;
+            OutputSection_element *res = NULL;
+            HASH_FIND(hh,output_section_map, key,sizeof(key), res); 
+           
             OutputSection *osec = create_a_output_sections(ctx, key->name, key->type, key->flags);
-                
-            out_sec_insert_element(output_section_map,key,osec);
-            VectorAdd(&(ctx->osec_pool),osec,sizeof(OutputSection *));
-            isec->output_section = osec;
+            OutputSection_element *element = (OutputSection_element *)malloc(sizeof(OutputSection_element));
+            element->key = key;
+            element->value = osec;
+            HASH_ADD_KEYPTR(hh, output_section_map, key, sizeof(key), element);
+
+            if (res == NULL) {
+                VectorAdd(&(ctx->osec_pool),osec,sizeof(OutputSection *));
+                isec->output_section = osec;
+            }
+            else {
+                isec->output_section = (OutputSection *)res->value;
+            }
+            VectorNew(&(isec->output_section->member),1);
         }
     }
     // Add input sections to output sections
@@ -646,7 +685,6 @@ void create_output_sections(Context *ctx) {
                 break;
             // isec->output_section = (OutputSection *)malloc(sizeof(OutputSection));
             if (isec && isec->is_alive && isec->file != NULL) {
-                VectorNew(&(isec->output_section->member),1);
                 VectorAdd(&(isec->output_section->member),isec,sizeof(InputSection *));
             }
         }    
@@ -706,15 +744,14 @@ ELFSymbol *add_sym(Context *ctx,ObjectFile *obj,char *name,...) {
     ElfSym *esym = (ElfSym *)malloc(sizeof(ElfSym));
     esym->st_type = type;
     // *esym->st_shndx.val = SHN_ABS;
-    esym->st_shndx.val[0] = (SHN_ABS >> 8) & 0xFF;
-    esym->st_shndx.val[1] = SHN_ABS & 0xFF;
+    *(u16 *)&(esym->st_shndx) = SHN_ABS;
     esym->st_bind = STB_GLOBAL;
     esym->st_visibility = STV_HIDDEN;
     VectorAdd(&(ctx->internal_esyms),esym,sizeof(ElfSym *));
     ELFSymbol *sym = insert_symbol(ctx,name,name);
     sym_init(sym);
     sym->value =  0xdeadbeef; // unique dummy value
-    sym->file = obj;
+    sym->file = NULL;
     VectorAdd(&(obj->symbols),sym,sizeof(ELFSymbol *));
     va_end(args);
     return sym;
@@ -809,11 +846,12 @@ void add_synthetic_symbols (Context *ctx) {
     int size = ctx->internal_esyms.size;
     // obj->inputfile.elf_syms = (ElfSym **)malloc(sizeof(ElfSym *) * size);
     // obj->inputfile.elf_syms = ctx->internal_esyms;
-    for(int i = 0;i < size;i++) {
-        ElfSym *temp = (ElfSym *)ctx->internal_esyms.data[i];
-        VectorAdd(&(obj->inputfile.elf_syms),temp,sizeof(ElfSym *));
-        // obj->inputfile.elf_syms.data[i] = (ElfSym *)ctx->internal_esyms.data[i];
-    }
+    // for(int i = 0;i < size;i++) {
+    //     ElfSym *temp = (ElfSym *)ctx->internal_esyms.data[i];
+    //     VectorAdd(&(obj->inputfile.elf_syms),temp,sizeof(ElfSym *));
+    //     // obj->inputfile.elf_syms.data[i] = (ElfSym *)ctx->internal_esyms.data[i];
+    // }
+    obj->inputfile.elf_syms = ctx->internal_esyms;
     resize(&(obj->has_symver),size - 1);
     obj_resolve_symbols(ctx,obj);
 
@@ -942,7 +980,7 @@ i64 get_rank1(Context *ctx,Chunk *chunk) {
         return 1;
     if (type == SHT_NOTE && (flags & SHF_ALLOC))
         return 3;
-    if (chunk == ctx->hash->chunk)
+    if (ctx->hash != NULL && ctx->hash->chunk != NULL && chunk == ctx->hash->chunk)
         return 4;
     if (chunk == ctx->gnu_hash->chunk)
         return 5;
@@ -1100,6 +1138,8 @@ void update_shdr(Context *ctx) {
             gnu_version_update_shdr(ctx,chunk);
         if (!strcmp(chunk->name,".gnu.version_r"))
             gnu_version_r_update_shdr(ctx,chunk);
+        if (!strcmp(chunk->name,".eh_frame_hdr"))
+            erframe_hdr_update_shdr(ctx,chunk);
     }
 }
 void compute_section_headers(Context *ctx) {
@@ -1120,7 +1160,7 @@ void compute_section_headers(Context *ctx) {
         u32 *size = (u32 *)&(chunk->shdr.sh_size);
         if (kind(chunk) != OUTPUT_SECTION  & *size == 0) {
             // 删除当前元素
-            free(chunk);
+            // free(chunk);
             for (int j = i; j < ctx->chunks.size - 1; j++) {
                 ctx->chunks.data[j] = ctx->chunks.data[j+1];
             }
@@ -1140,7 +1180,7 @@ void compute_section_headers(Context *ctx) {
         *(u32 *)&(ctx->shdr->chunk->shdr.sh_size) = shndx * sizeof(ElfShdr);
 
     update_shdr(ctx);  
-
+    // if (ctx.symtab_shndx) {
     for (int i = 0; i < ctx->chunks.size; i++) {
         // 获取当前元素
         Chunk* currentElement = ctx->chunks.data[i];
@@ -1291,9 +1331,9 @@ i64 set_osec_offsets(Context *ctx) {
         i64 fileoff = set_file_offsets(ctx);
 
         if (ctx->phdr) {
-            i64 sz = *ctx->phdr->chunk->shdr.sh_size.val;
+            u32 sz = *(u32 *)&(ctx->phdr->chunk->shdr.sh_size);
             output_phdr_update_shdr(ctx,ctx->phdr->chunk);
-            if (sz != *ctx->phdr->chunk->shdr.sh_size.val)
+            if (sz != *(u32 *)&(ctx->phdr->chunk->shdr.sh_size))
                 continue;
         }
 
@@ -1306,7 +1346,7 @@ void start(ELFSymbol *sym, Chunk *chunk) {
     i64 bias = 0;
     if (sym && chunk) {
         set_output_section(chunk,sym);
-        sym->value = *chunk->shdr.sh_addr.val + bias;
+        sym->value = *(u32 *)&(chunk->shdr.sh_addr) + bias;
     }
 }
 
@@ -1322,7 +1362,7 @@ Chunk *find(char *name,vector sections) {
 void stop(ELFSymbol *sym, Chunk *chunk) {
     if (sym && chunk) {
         set_output_section(chunk,sym);
-        sym->value = *chunk->shdr.sh_addr.val + *chunk->shdr.sh_size.val;
+        sym->value = *(u32 *)&(chunk->shdr.sh_addr) + *(u32 *)&(chunk->shdr.sh_size);
     }
 }
 
@@ -1342,14 +1382,14 @@ void fix_synthetic_symbols(Context *ctx) {
 
     if (ctx->ehdr && (*ctx->ehdr->chunk->shdr.sh_flags.val & SHF_ALLOC)) {
         set_output_section(sections.data[0],ctx->__ehdr_start);
-        ctx->__ehdr_start->value = *ctx->ehdr->chunk->shdr.sh_addr.val;
+        ctx->__ehdr_start->value = *(u32 *)&(ctx->ehdr->chunk->shdr.sh_addr);
         set_output_section(sections.data[0],ctx->__executable_start);
-        ctx->__executable_start->value = *ctx->ehdr->chunk->shdr.sh_addr.val;
+        ctx->__executable_start->value = *(u32 *)&(ctx->ehdr->chunk->shdr.sh_addr);
     }
 
     if (ctx->__dso_handle) {
         set_output_section(sections.data[0],ctx->__dso_handle);
-        ctx->__dso_handle->value = *((Chunk *)sections.data[0])->shdr.sh_addr.val;
+        ctx->__dso_handle->value = *(u32 *)&(((Chunk *)sections.data[0])->shdr.sh_addr);
     }
 
     // _end, _etext, _edata and the like
@@ -1405,14 +1445,18 @@ void fix_synthetic_symbols(Context *ctx) {
 
 void copy(Chunk *chunk,Context *ctx) {
     char *name = chunk->name == NULL ? "(header)" : chunk->name;
-    if (!strcmp(chunk->name,"EHDR"))
+    if (!strcmp(chunk->name,"EHDR")) {
         ehdr_copy_buf(ctx,chunk);
+    }
 
     if (!strcmp(chunk->name,"SHDR"))
         shdr_copy_buf(ctx,chunk);
       
-    if (!strcmp(chunk->name,"PHDR"))
+    if (!strcmp(chunk->name,"PHDR")) {
         phdr_copy_buf(ctx,chunk);
+        // error(ctx);
+    }
+        
 
     if (!strcmp(chunk->name,".strtab"))
         strtab_copy_buf(ctx,chunk);
@@ -1452,3 +1496,9 @@ void copy_chunks(Context *ctx) {
     }
 }
 
+void convert_common_symbols(Context *ctx) {
+    for(int i = 0;i < ctx->objs.size;i++) {
+        ObjectFile *obj = ctx->objs.data[i];
+        file_convert_common_symbols(ctx,obj);
+    }
+}

@@ -16,14 +16,3 @@ static inline void resize(BitVector* bv, u32 size) {
         bv->size = size;
     }
 }
-
-// int main() {
-//     BitVector bv;
-//     bv.vec = (u8*)malloc(sizeof(u8));
-//     bv.size = 1;
-
-//     resize(&bv, 10);
-
-//     free(bv.vec);
-//     return 0;
-// }

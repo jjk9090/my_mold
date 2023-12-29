@@ -1,7 +1,7 @@
 file(REMOVE_RECURSE
   "../mymold"
   "../mymold.pdb"
-  "CMakeFiles/mymold.dir/arch-arm32.c.o"
+  "CMakeFiles/mymold.dir/arch_arm32.c.o"
   "CMakeFiles/mymold.dir/input_file.c.o"
   "CMakeFiles/mymold.dir/input_sections.c.o"
   "CMakeFiles/mymold.dir/main.c.o"

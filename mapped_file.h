@@ -7,7 +7,6 @@
 #include <unistd.h>
 #include <errno.h>
 # include <sys/mman.h>
-
 typedef struct MappedFile {
     char* name;
     u8 * data;
@@ -116,6 +115,7 @@ static inline MappedFile *MappedFile_open(Context *ctx,char *path) {
         return NULL;
     }
 
+
     mf->name = strdup(path);
     mf->size = st.st_size;
 
@@ -153,6 +153,7 @@ static inline MappedFile *MappedFile_open(Context *ctx,char *path) {
         }
 #endif
     }
+
 
     close(fd);
     return mf;

@@ -51,13 +51,11 @@ static inline FileDescriptor open_or_create_file(Context *ctx,const char *path, 
             return (FileDescriptor){fd, path2};
         }
         unlink(path2);
+        fd = open(path2, O_RDWR | O_CREAT, perm);
+        if(fd == -1)
+            printf("%s: cannot open\n",path2);
     }
 
-    fd = open(path2, O_RDWR | O_CREAT, perm);
-    if (fd == -1) {
-        perror("open");
-        exit(EXIT_FAILURE);
-    }
     if (ftruncate(fd, filesize) == -1) {
         perror("ftruncate");
         exit(EXIT_FAILURE);
@@ -82,6 +80,7 @@ static inline OutputFile *create_output_file(Context *ctx, char *path, i64 files
         printf("%s : mmap failed",path);
     output_buffer_start = output_file->buf;
     output_buffer_end = output_file->buf + filesize;
+    // output_file->filesize = filesize;
     return output_file;
 }
 
@@ -102,6 +101,7 @@ static inline OutputFile *output_open(Context *ctx, char *path, i64 filesize, i6
     } else {
         file = create_output_file(ctx,path,filesize,perm);
     }
+    file->filesize = filesize;
 #ifdef MADV_HUGEPAGE
     madvise(file->buf, filesize, MADV_HUGEPAGE);
 #endif

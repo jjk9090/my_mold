@@ -73,7 +73,9 @@
         "assert.h": "c",
         "elf_symbol.h": "c",
         "output_file.h": "c",
-        "output-file-unix.h": "c"
+        "output-file-unix.h": "c",
+        "stdarg.h": "c",
+        "mapped_file.h": "c"
     },
     "C_Cpp.errorSquiggles": "enabled"
 }

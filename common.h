@@ -2,6 +2,15 @@
 #define COMMON_H
 #include "mold.h"
 
+static inline void get_error(Context *ctx) {
+    ElfEhdr *hdr1 = (ElfEhdr *)(ctx->buf + *(u32 *)&(ctx->ehdr->chunk->shdr.sh_offset));
+    unsigned char *ptr = (unsigned char *)hdr1;
+    int size = sizeof(ElfEhdr);
+    unsigned short lastTwoBytes = *(unsigned short *)(ptr + size - 2);
+
+    printf("%hu\n", lastTwoBytes);
+}
+
 static inline void push_back(Context* ctx, ELFSymbol *value) {
     ctx->arg.undefined_count++;
     ELFSymbol **temp = (ELFSymbol **)malloc(ctx->arg.undefined_count * sizeof(ELFSymbol *));
@@ -40,10 +49,15 @@ static inline u64 align_down(u64 val, u64 align) {
     return val & ~(align - 1);
 }
 
-static inline i64 write_vector(void *buf, vector vec) {
+static inline i64 write_vector(Context *ctx, void *buf, vector vec) {
     // 256   8  32
-    i64 sz = vec.size * sizeof(sizeof(U32));
-    memcpy(buf, vec.data, sz);
+    i64 sz = vec.size * 32;
+    ElfPhdr phdr1[vec.size];
+    for(int i = 0;i < vec.size;i++) {
+        ElfPhdr temp1 = *(ElfPhdr *)vec.data[i];
+        phdr1[i] = temp1;
+    }
+    memcpy(buf, phdr1, sz);
     return sz;
 }
 static inline i64 write_string(void *buf, char *str) {

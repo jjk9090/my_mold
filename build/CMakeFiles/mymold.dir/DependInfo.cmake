@@ -4,7 +4,7 @@ set(CMAKE_DEPENDS_LANGUAGES
   )
 # The set of files for implicit dependencies of each language:
 set(CMAKE_DEPENDS_CHECK_C
-  "/home/jjk/project/mold2/my_mold/arch-arm32.c" "/home/jjk/project/mold2/my_mold/build/CMakeFiles/mymold.dir/arch-arm32.c.o"
+  "/home/jjk/project/mold2/my_mold/arch_arm32.c" "/home/jjk/project/mold2/my_mold/build/CMakeFiles/mymold.dir/arch_arm32.c.o"
   "/home/jjk/project/mold2/my_mold/input_file.c" "/home/jjk/project/mold2/my_mold/build/CMakeFiles/mymold.dir/input_file.c.o"
   "/home/jjk/project/mold2/my_mold/input_sections.c" "/home/jjk/project/mold2/my_mold/build/CMakeFiles/mymold.dir/input_sections.c.o"
   "/home/jjk/project/mold2/my_mold/main.c" "/home/jjk/project/mold2/my_mold/build/CMakeFiles/mymold.dir/main.c.o"

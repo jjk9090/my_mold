@@ -140,6 +140,8 @@ struct ObjectFile{
     // CieRecord
     vector cies;
     vector fdes;
+
+    bool has_common_symbol;
 } ;
 
 typedef struct {
@@ -179,6 +181,7 @@ struct Context {
     u8 *buf;
     OutputFile *output_file;
     char *output_tmpfile;
+    MergedSection *gloval_merge_sec;
     struct {
         /* data */
         ELFSymbol *entry;
@@ -236,6 +239,7 @@ struct Context {
         i64 z_stack_size;
         u64 image_base;
         i64 filler;
+        char *dynamic_linker;
     } arg;
 
     i64 default_version;
@@ -252,6 +256,8 @@ struct Context {
     ObjectFile *internal_obj;
     ObjectFile **obj_pool;
     vector osec_pool;
+    vector mf_pool;
+
     vector internal_esyms;
     vector merged_sections;
     int merged_sections_count;
@@ -262,6 +268,7 @@ struct Context {
     OutputEhdr *ehdr;
     OutputShdr *shdr;
     OutputPhdr *phdr;
+    InterpSection *interp;
     GotSection *got;
     GotPltSection *gotplt;
     RelPltSection *relplt;
@@ -331,9 +338,9 @@ typedef struct {
 #include "output-file-unix.h"
 
 static inline i64 get_shndx(ElfSym *esym) {
-    if (*esym->st_shndx.val == SHN_XINDEX)
+    if (*(u16 *)&(esym->st_shndx) == SHN_XINDEX)
         return -1;
-    return *esym->st_shndx.val;
+    return *(u16 *)&(esym->st_shndx);
 }
 static const StringView EMPTY_STRING_VIEW = {NULL, 0};
 char *mold_version;
@@ -347,13 +354,17 @@ void compute_merged_section_sizes(Context *ctx);
 void create_synthetic_sections(Context *ctx);
 void create_output_sections(Context *ctx);
 void define_input_section(ObjectFile *file,Context *ctx,int i);
-void input_sec_uncompress(Context *ctx,ObjectFile *file,int i);
+void input_sec_uncompress(Context *ctx,ObjectFile *file,InputSection *isec,int i);
 void initialize_mergeable_sections(Context *ctx,ObjectFile *file);
 void resolve_section_pieces(Context *ctx);
 uint64_t hash_string(char *str);
 SectionFragment *merge_sec_insert(Context *ctx, StringView *data, u64 hash,
                          i64 p2align,MergedSection *sec);
 void file_resolve_section_pieces(Context *ctx,ObjectFile *file);
+
+void convert_common_symbols(Context *ctx);
+void file_convert_common_symbols(Context *ctx,ObjectFile *obj);
+
 void assign_offsets(Context *ctx,MergedSection *sec);
 void obj_resolve_symbols(Context *ctx,ObjectFile *obj);
 void add_synthetic_symbols (Context *ctx);
@@ -390,6 +401,7 @@ void gnu_hash_update_shdr(Context *ctx,Chunk *chunk);
 void eh_frame_hdr_update_shdr(Context *ctx,Chunk *chunk);
 void gnu_version_update_shdr(Context *ctx,Chunk *chunk);
 void gnu_version_r_update_shdr(Context *ctx,Chunk *chunk);
+void erframe_hdr_update_shdr (Context *ctx,Chunk *chunk);
 
 void fix_synthetic_symbols(Context *ctx);
 i64 set_osec_offsets(Context *ctx);
@@ -410,7 +422,9 @@ void thunk_copy_buf(Context *ctx,Thunk *thunk);
 void write_to(Context *ctx,u8 *buf,OutputSection *osec);
 void isec_write_to(Context *ctx,u8 *buf,InputSection *isec,int i);
 u64 get_eflags(Context *ctx);
-
+ElfSym to_output_esym(Context *ctx,ELFSymbol *sym, u32 st_name,
+                         U32 *shn_xindex,ObjectFile *file);
+void obj_populate_symtab(Context *ctx,ObjectFile *file);
 // 获取输入input_section
 static inline ElfShdr *get_shdr(ObjectFile *file,int shndx) {
   if (shndx < file->inputfile.elf_sections_num)
@@ -436,11 +450,13 @@ static inline StringView get_rels(Context *ctx,ObjectFile *file,InputSection *se
 }
 
 static inline InputSection *get_section(ElfSym *esym,ObjectFile *obj) {
-    return obj->sections[get_shndx(esym)];
+    i64 idx = get_shndx(esym);
+    return obj->sections[idx];
 }
 
 static inline ElfSym *esym(Inputefile *file,int sym_idx) {
-  return file->elf_syms.data[sym_idx];
+    ElfSym * esym = file->elf_syms.data[sym_idx];
+    return esym;
 }
 
 static inline void set_input_section(InputSection *isec,ELFSymbol *sym) {
@@ -492,7 +508,7 @@ static inline u32 elfsym_get_type(ObjectFile *file,int i){
     if (sym && sym->st_type == STT_GNU_IFUNC && file->inputfile.is_dso)
         return STT_FUNC;
     if(sym)
-        return esym(&(file->inputfile),i)->st_type;
+        return sym->st_type;
 }
 
 static inline SectionFragment *get_frag(ELFSymbol *sym) {
@@ -541,9 +557,12 @@ static inline ChunkKind kind(Chunk *chunk) {
     return SYNTHETIC;
 }
 
+static inline u64 input_sec_get_addr(OutputSection *osec,u64 offset) {
+    return *(u32 *)&(osec->chunk->shdr.sh_addr) + offset;
+}
 static inline u64 elfsym_get_addr(Context *ctx,i64 flags,ELFSymbol *sym) {
     SectionFragment *frag = get_frag(sym);
-    if (sym) {
+    if (sym && frag) {
         if (!frag->is_alive) {
             return 0;
         }
@@ -558,7 +577,16 @@ static inline u64 elfsym_get_addr(Context *ctx,i64 flags,ELFSymbol *sym) {
 
     }
 
-    // return input_sec_get_addr() + sym->value;
+    return input_sec_get_addr(isec->output_section,isec->offset) + sym->value;
+}
+
+static inline void error(Context *ctx) {
+    ElfEhdr *hdr1 = (ElfEhdr *)(ctx->buf + *(u32 *)&(ctx->ehdr->chunk->shdr.sh_offset));
+    unsigned char *ptr = (unsigned char *)hdr1;
+    int size = sizeof(ElfEhdr);
+    unsigned short lastTwoBytes = *(unsigned short *)(ptr + size - 2);
+
+    printf("%hu\n", lastTwoBytes);
 }
 #endif  // 结束头文件保护
 
