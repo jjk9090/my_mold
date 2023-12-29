@@ -1,30 +1,6 @@
 {
     "configurations": [
         {
-            "name": "test",
-            "type": "cppdbg",
-            "request": "launch",
-            "program": "${workspaceFolder}/test_demo/tt2/mymold",
-            "args": [],
-            "stopAtEntry": false,
-            "cwd": "${workspaceFolder}/test_demo/tt2",
-            "environment": [],
-            "externalConsole": false,
-            "MIMode": "gdb",
-            "setupCommands": [
-                {
-                    "description": "为 gdb 启用整齐打印",
-                    "text": "-enable-pretty-printing",
-                    "ignoreFailures": true
-                },
-                {
-                    "description": "将反汇编风格设置为 Intel",
-                    "text": "-gdb-set disassembly-flavor intel",
-                    "ignoreFailures": true
-                }
-            ]
-        },
-        {
             "name": "(gdb) 启动",
             "type": "cppdbg",
             "request": "launch",
@@ -37,24 +13,6 @@
             ],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}/test_demo/demo",
-            "environment": [],
-            "externalConsole": false,
-            "MIMode": "gdb",
-            "setupCommands": [
-              {
-                "description": "为 gdb 启用整齐打印",
-                "text": "-enable-pretty-printing",
-                "ignoreFailures": true
-              }
-            ]
-        },
-        {
-            "name": "test2",
-            "type": "cppdbg",
-            "request": "launch",
-            "program": "${workspaceFolder}/test_demo/test/test6/test",
-            "stopAtEntry": false,
-            "cwd": "${workspaceFolder}/test_demo/test/test6",
             "environment": [],
             "externalConsole": false,
             "MIMode": "gdb",
